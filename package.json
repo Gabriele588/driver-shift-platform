@@ -1,0 +1,16 @@
+{
+  "name": "driver-shift-platform",
+  "version": "3.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "check": "node --check app.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4"
+  },
+  "devDependencies": {
+    "vercel": "^37.6.0"
+  }
+}
+
