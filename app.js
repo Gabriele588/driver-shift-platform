@@ -24,6 +24,9 @@ let currentUser = null;
 let memorySessionUser = "";
 let remoteMode = false;
 let remoteSaveTimer = null;
+let remoteSyncTimer = null;
+let remoteSaveInProgress = false;
+let remoteDirty = false;
 
 const els = {
   appShell: document.querySelector("#appShell"),
@@ -133,7 +136,7 @@ async function init() {
 
 function markAppReady() {
   if (!els.appStatus) return;
-  els.appStatus.textContent = "App pronta";
+  els.appStatus.textContent = remoteMode ? "App pronta - dati condivisi" : "App pronta";
   els.appStatus.classList.add("ready");
 }
 
@@ -170,12 +173,16 @@ function loadState() {
 }
 
 function saveState() {
+  saveLocalState();
+  if (remoteMode && currentUser) scheduleRemoteStateSave();
+}
+
+function saveLocalState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
     // Some file-preview contexts block localStorage. The app must remain usable in memory.
   }
-  if (remoteMode && currentUser) scheduleRemoteStateSave();
 }
 
 function defaultUsers() {
@@ -216,6 +223,7 @@ async function login(event) {
       if (els.loginScreen) els.loginScreen.hidden = true;
       if (els.appShell) els.appShell.classList.remove("auth-locked");
       if (isDispatcher()) state.station = currentUser.station;
+      startRemoteSync();
       render();
       renderAuth();
       markAppReady();
@@ -253,6 +261,7 @@ function logout() {
   if (remoteMode) {
     apiRequest("/api/logout", { method: "POST" }).catch(() => {});
   }
+  stopRemoteSync();
   safeSessionRemove(CURRENT_USER_KEY);
   currentUser = null;
   calendarInteraction = { mode: "", date: "", driverId: "" };
@@ -276,7 +285,8 @@ function applyRemoteSession(data) {
   currentUser = data.user || null;
   state = { ...defaultState(), ...(data.state || {}) };
   if (!Array.isArray(state.users)) state.users = [];
-  saveState();
+  saveLocalState();
+  if (currentUser) startRemoteSync();
 }
 
 async function apiRequest(path, options = {}) {
@@ -291,12 +301,52 @@ async function apiRequest(path, options = {}) {
 
 function scheduleRemoteStateSave() {
   window.clearTimeout(remoteSaveTimer);
+  remoteDirty = true;
   remoteSaveTimer = window.setTimeout(() => {
+    remoteSaveInProgress = true;
     apiRequest("/api/state", {
       method: "PUT",
       body: JSON.stringify({ state })
-    }).catch(() => showToast("Salvataggio server non riuscito. Verifica connessione."));
+    }).then((data) => {
+      remoteDirty = false;
+      if (data.state) {
+        state = { ...defaultState(), ...data.state };
+        saveLocalState();
+      }
+    }).catch(() => showToast("Salvataggio server non riuscito. Verifica connessione."))
+      .finally(() => {
+        remoteSaveInProgress = false;
+      });
   }, 350);
+}
+
+function startRemoteSync() {
+  if (!remoteMode || !currentUser) return;
+  stopRemoteSync();
+  remoteSyncTimer = window.setInterval(refreshRemoteState, 10000);
+}
+
+function stopRemoteSync() {
+  window.clearInterval(remoteSyncTimer);
+  remoteSyncTimer = null;
+}
+
+async function refreshRemoteState() {
+  if (!remoteMode || !currentUser || remoteDirty || remoteSaveInProgress) return;
+  try {
+    const data = await apiRequest("/api/session");
+    if (!data.authenticated) {
+      logout();
+      return;
+    }
+    currentUser = data.user || currentUser;
+    state = { ...defaultState(), ...(data.state || {}) };
+    saveLocalState();
+    render();
+    renderAuth();
+  } catch {
+    // Keep the current view usable if a temporary network issue occurs.
+  }
 }
 
 function safeSessionGet(key) {
