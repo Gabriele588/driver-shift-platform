@@ -136,7 +136,7 @@ async function init() {
 
 function markAppReady() {
   if (!els.appStatus) return;
-  els.appStatus.textContent = remoteMode ? "App pronta - dati condivisi" : "App pronta";
+  els.appStatus.textContent = remoteMode ? "App pronta - dati condivisi - sync 3s" : "App pronta";
   els.appStatus.classList.add("ready");
 }
 
@@ -323,7 +323,7 @@ function scheduleRemoteStateSave() {
 function startRemoteSync() {
   if (!remoteMode || !currentUser) return;
   stopRemoteSync();
-  remoteSyncTimer = window.setInterval(refreshRemoteState, 10000);
+  remoteSyncTimer = window.setInterval(refreshRemoteState, 3000);
 }
 
 function stopRemoteSync() {
