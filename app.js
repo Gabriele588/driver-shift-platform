@@ -291,6 +291,7 @@ function applyRemoteSession(data) {
 
 async function apiRequest(path, options = {}) {
   const response = await fetch(path, {
+    cache: "no-store",
     credentials: "include",
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options
@@ -313,6 +314,7 @@ function scheduleRemoteStateSave() {
         state = { ...defaultState(), ...data.state };
         saveLocalState();
       }
+      if (els.appStatus) els.appStatus.textContent = "App pronta - dati condivisi - salvato";
     }).catch(() => showToast("Salvataggio server non riuscito. Verifica connessione."))
       .finally(() => {
         remoteSaveInProgress = false;
@@ -334,8 +336,8 @@ function stopRemoteSync() {
 async function refreshRemoteState() {
   if (!remoteMode || !currentUser || remoteDirty || remoteSaveInProgress) return;
   try {
-    const data = await apiRequest("/api/session");
-    if (!data.authenticated) {
+    const data = await apiRequest(`/api/state?t=${Date.now()}`);
+    if (!data.ok) {
       logout();
       return;
     }
@@ -344,6 +346,7 @@ async function refreshRemoteState() {
     saveLocalState();
     render();
     renderAuth();
+    if (els.appStatus) els.appStatus.textContent = "App pronta - dati condivisi - sync 3s";
   } catch {
     // Keep the current view usable if a temporary network issue occurs.
   }
