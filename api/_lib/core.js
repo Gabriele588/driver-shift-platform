@@ -129,8 +129,8 @@ async function syncUsersFromState(state, db = supabase()) {
   }
 }
 
-async function saveState(state, db = supabase()) {
-  await syncUsersFromState(state, db);
+async function saveState(state, db = supabase(), options = {}) {
+  if (options.syncUsers) await syncUsersFromState(state, db);
   const sanitized = { ...defaultState(), ...state, users: await listUsers(db) };
   const { error } = await db
     .from("driver_shift_state")
@@ -191,4 +191,3 @@ module.exports = {
   supabase,
   verifyPassword
 };
-

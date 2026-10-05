@@ -10,10 +10,10 @@ module.exports = async function handler(req, res) {
       const state = await getState(db);
       return send(res, 200, { ok: true, user, state, ts: Date.now() });
     }
-    const state = await saveState(req.body?.state || {}, db);
+    const state = await saveState(req.body?.state || {}, db, { syncUsers: false });
     return send(res, 200, { ok: true, user, state, ts: Date.now() });
   } catch (error) {
     console.error(error);
-    return send(res, 500, { error: "State request failed" });
+    return send(res, 500, { error: "State request failed", detail: error.message || "" });
   }
 };

@@ -11,7 +11,8 @@ module.exports = async function handler(req, res) {
     },
     database: {
       usersTable: false,
-      stateTable: false,
+    stateTable: false,
+      stateWritable: false,
       usersCount: 0,
       adminPresent: false,
       adminPasswordCheck: false
@@ -30,11 +31,16 @@ module.exports = async function handler(req, res) {
     const state = await db.from("driver_shift_state").select("id").eq("id", "main").limit(1);
     if (state.error) throw state.error;
     result.database.stateTable = true;
-    result.ok = result.env.supabaseUrl && result.env.supabaseKey && result.env.sessionSecret && result.database.adminPresent && result.database.adminPasswordCheck;
+    const writeTest = await db
+      .from("driver_shift_state")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", "main");
+    if (writeTest.error) throw writeTest.error;
+    result.database.stateWritable = true;
+    result.ok = result.env.supabaseUrl && result.env.supabaseKey && result.env.sessionSecret && result.database.adminPresent && result.database.adminPasswordCheck && result.database.stateWritable;
     return send(res, 200, result);
   } catch (error) {
     result.error = error.message || "Health check failed";
     return send(res, 500, result);
   }
 };
-
