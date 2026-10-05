@@ -12,6 +12,7 @@ module.exports = async function handler(req, res) {
       .ilike("username", String(username || ""))
       .eq("active", true)
       .single();
+    if (error) console.error("Login user lookup failed", error);
     if (error || !user || !verifyPassword(password, user.password_hash)) {
       return send(res, 401, { error: "Invalid credentials" });
     }
@@ -34,4 +35,3 @@ module.exports = async function handler(req, res) {
     return send(res, 500, { error: "Login failed" });
   }
 };
-
