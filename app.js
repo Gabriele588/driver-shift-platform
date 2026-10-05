@@ -303,23 +303,30 @@ async function apiRequest(path, options = {}) {
 function scheduleRemoteStateSave() {
   window.clearTimeout(remoteSaveTimer);
   remoteDirty = true;
-  remoteSaveTimer = window.setTimeout(() => {
-    remoteSaveInProgress = true;
-    apiRequest("/api/state", {
+  remoteSaveTimer = window.setTimeout(saveRemoteStateNow, 50);
+}
+
+async function saveRemoteStateNow() {
+  if (!remoteMode || !currentUser) return;
+  remoteSaveInProgress = true;
+  if (els.appStatus) els.appStatus.textContent = "App pronta - dati condivisi - salvataggio...";
+  try {
+    const data = await apiRequest("/api/state", {
       method: "PUT",
       body: JSON.stringify({ state })
-    }).then((data) => {
-      remoteDirty = false;
-      if (data.state) {
-        state = { ...defaultState(), ...data.state };
-        saveLocalState();
-      }
-      if (els.appStatus) els.appStatus.textContent = "App pronta - dati condivisi - salvato";
-    }).catch(() => showToast("Salvataggio server non riuscito. Verifica connessione."))
-      .finally(() => {
-        remoteSaveInProgress = false;
-      });
-  }, 350);
+    });
+    remoteDirty = false;
+    if (data.state) {
+      state = { ...defaultState(), ...data.state };
+      saveLocalState();
+    }
+    if (els.appStatus) els.appStatus.textContent = "App pronta - dati condivisi - salvato";
+  } catch (error) {
+    if (els.appStatus) els.appStatus.textContent = "App pronta - errore salvataggio server";
+    showToast("Salvataggio server non riuscito. Apri /api/health e verifica il collegamento.");
+  } finally {
+    remoteSaveInProgress = false;
+  }
 }
 
 function startRemoteSync() {
