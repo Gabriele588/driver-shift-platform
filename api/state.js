@@ -10,7 +10,7 @@ module.exports = async function handler(req, res) {
       const state = await getState(db);
       return send(res, 200, { ok: true, user, state, ts: Date.now() });
     }
-    const state = await saveState(req.body?.state || {}, db, { syncUsers: false });
+    const state = await saveState(req.body?.state || {}, db, { syncUsers: req.body?.syncUsers === true });
     return send(res, 200, { ok: true, user, state, ts: Date.now() });
   } catch (error) {
     console.error(error);

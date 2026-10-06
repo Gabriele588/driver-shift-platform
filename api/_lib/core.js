@@ -185,6 +185,8 @@ module.exports = {
   currentUser,
   ensureSeedData,
   getState,
+  hashPassword,
+  listUsers,
   saveState,
   send,
   setSessionCookie,

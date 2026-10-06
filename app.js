@@ -879,7 +879,7 @@ function renderUserStationOptions() {
   els.userStation.innerHTML = stations.map((station) => `<option value="${escapeHtml(station)}">${escapeHtml(station)}</option>`).join("");
 }
 
-function saveUser(event) {
+async function saveUser(event) {
   event.preventDefault();
   if (!canManageUsers()) return;
   const username = clean(els.userUsername.value);
@@ -895,6 +895,23 @@ function saveUser(event) {
   if (user.role === "dispatcher" && user.station === "Tutte") {
     showToast("Il dispatcher deve avere una filiale specifica");
     return;
+  }
+  if (remoteMode) {
+    try {
+      const data = await apiRequest("/api/users", {
+        method: "POST",
+        body: JSON.stringify({ user })
+      });
+      state.users = data.users || state.users;
+      els.userForm.reset();
+      addLog("Utente salvato", "", user.fullName, "", roleLabel(user.role));
+      saveAndRender();
+      showToast("Utente salvato");
+      return;
+    } catch {
+      showToast("Salvataggio utente non riuscito");
+      return;
+    }
   }
   const existing = state.users.find((item) => item.id === user.id || item.username.toLowerCase() === username.toLowerCase());
   if (existing) Object.assign(existing, user);
@@ -914,7 +931,7 @@ function editUser(id) {
   els.userRole.value = user.role;
 }
 
-function removeUser(id) {
+async function removeUser(id) {
   if (!canManageUsers()) return;
   const user = state.users.find((item) => item.id === id);
   if (!user || user.username === currentUser?.username) {
@@ -922,6 +939,22 @@ function removeUser(id) {
     return;
   }
   if (!confirm(`Rimuovere l'utente ${user.fullName}?`)) return;
+  if (remoteMode) {
+    try {
+      const data = await apiRequest("/api/users", {
+        method: "DELETE",
+        body: JSON.stringify({ id })
+      });
+      state.users = data.users || state.users.filter((item) => item.id !== id);
+      addLog("Utente rimosso", "", user.fullName, roleLabel(user.role), "");
+      saveAndRender();
+      showToast("Utente rimosso");
+      return;
+    } catch {
+      showToast("Rimozione utente non riuscita");
+      return;
+    }
+  }
   state.users = state.users.filter((item) => item.id !== id);
   addLog("Utente rimosso", "", user.fullName, roleLabel(user.role), "");
   saveAndRender({ syncUsers: true });
