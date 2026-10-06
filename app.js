@@ -29,6 +29,7 @@ let remoteSaveInProgress = false;
 let remoteDirty = false;
 let remoteSaveOptions = { syncUsers: false };
 let lastUserInteractionAt = 0;
+let lastLocalMutationAt = 0;
 
 const els = {
   appShell: document.querySelector("#appShell"),
@@ -176,6 +177,7 @@ function loadState() {
 }
 
 function saveState(options = {}) {
+  if (remoteMode && currentUser) lastLocalMutationAt = Date.now();
   saveLocalState();
   if (remoteMode && currentUser) scheduleRemoteStateSave(options);
 }
@@ -351,8 +353,10 @@ function stopRemoteSync() {
 async function refreshRemoteState() {
   if (!remoteMode || !currentUser || remoteDirty || remoteSaveInProgress) return;
   if (isUiInteractionActive()) return;
+  const refreshStartedAt = Date.now();
   try {
     const data = await apiRequest(`/api/state?t=${Date.now()}`);
+    if (refreshStartedAt < lastLocalMutationAt || Date.now() - lastLocalMutationAt < 1200) return;
     if (!data.ok) {
       logout();
       return;
