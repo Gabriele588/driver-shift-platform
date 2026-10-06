@@ -27,6 +27,7 @@ let remoteSaveTimer = null;
 let remoteSyncTimer = null;
 let remoteSaveInProgress = false;
 let remoteDirty = false;
+let remoteSaveOptions = { syncUsers: false };
 
 const els = {
   appShell: document.querySelector("#appShell"),
@@ -136,7 +137,7 @@ async function init() {
 
 function markAppReady() {
   if (!els.appStatus) return;
-  els.appStatus.textContent = remoteMode ? "App pronta - dati condivisi - sync 3s" : "App pronta";
+  els.appStatus.textContent = remoteMode ? "App pronta - dati condivisi - sync 1.5s" : "App pronta";
   els.appStatus.classList.add("ready");
 }
 
@@ -172,9 +173,9 @@ function loadState() {
   }
 }
 
-function saveState() {
+function saveState(options = {}) {
   saveLocalState();
-  if (remoteMode && currentUser) scheduleRemoteStateSave();
+  if (remoteMode && currentUser) scheduleRemoteStateSave(options);
 }
 
 function saveLocalState() {
@@ -300,20 +301,25 @@ async function apiRequest(path, options = {}) {
   return response.status === 204 ? {} : response.json();
 }
 
-function scheduleRemoteStateSave() {
+function scheduleRemoteStateSave(options = {}) {
   window.clearTimeout(remoteSaveTimer);
   remoteDirty = true;
+  remoteSaveOptions = {
+    syncUsers: remoteSaveOptions.syncUsers || Boolean(options.syncUsers)
+  };
   remoteSaveTimer = window.setTimeout(saveRemoteStateNow, 50);
 }
 
 async function saveRemoteStateNow() {
   if (!remoteMode || !currentUser) return;
+  const options = { ...remoteSaveOptions };
+  remoteSaveOptions = { syncUsers: false };
   remoteSaveInProgress = true;
   if (els.appStatus) els.appStatus.textContent = "App pronta - dati condivisi - salvataggio...";
   try {
     const data = await apiRequest("/api/state", {
       method: "PUT",
-      body: JSON.stringify({ state })
+      body: JSON.stringify({ state, syncUsers: options.syncUsers })
     });
     remoteDirty = false;
     if (data.state) {
@@ -332,7 +338,7 @@ async function saveRemoteStateNow() {
 function startRemoteSync() {
   if (!remoteMode || !currentUser) return;
   stopRemoteSync();
-  remoteSyncTimer = window.setInterval(refreshRemoteState, 3000);
+  remoteSyncTimer = window.setInterval(refreshRemoteState, 1500);
 }
 
 function stopRemoteSync() {
@@ -342,6 +348,7 @@ function stopRemoteSync() {
 
 async function refreshRemoteState() {
   if (!remoteMode || !currentUser || remoteDirty || remoteSaveInProgress) return;
+  if (isUserFormActive()) return;
   try {
     const data = await apiRequest(`/api/state?t=${Date.now()}`);
     if (!data.ok) {
@@ -353,10 +360,16 @@ async function refreshRemoteState() {
     saveLocalState();
     render();
     renderAuth();
-    if (els.appStatus) els.appStatus.textContent = "App pronta - dati condivisi - sync 3s";
+    if (els.appStatus) els.appStatus.textContent = "App pronta - dati condivisi - sync 1.5s";
   } catch {
     // Keep the current view usable if a temporary network issue occurs.
   }
+}
+
+function isUserFormActive() {
+  if (!els.userForm) return false;
+  if (els.userForm.contains(document.activeElement)) return true;
+  return [els.userFullName, els.userUsername, els.userPassword].some((input) => clean(input?.value));
 }
 
 function safeSessionGet(key) {
@@ -888,7 +901,7 @@ function saveUser(event) {
   else state.users.push(user);
   els.userForm.reset();
   addLog("Utente salvato", "", user.fullName, "", roleLabel(user.role));
-  saveAndRender();
+  saveAndRender({ syncUsers: true });
 }
 
 function editUser(id) {
@@ -911,7 +924,7 @@ function removeUser(id) {
   if (!confirm(`Rimuovere l'utente ${user.fullName}?`)) return;
   state.users = state.users.filter((item) => item.id !== id);
   addLog("Utente rimosso", "", user.fullName, roleLabel(user.role), "");
-  saveAndRender();
+  saveAndRender({ syncUsers: true });
 }
 
 function renderLog() {
@@ -2055,8 +2068,8 @@ function addLog(action, date, driver, from, to) {
   });
 }
 
-function saveAndRender() {
-  saveState();
+function saveAndRender(options = {}) {
+  saveState(options);
   render();
 }
 
