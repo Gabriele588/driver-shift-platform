@@ -28,6 +28,7 @@ let remoteSyncTimer = null;
 let remoteSaveInProgress = false;
 let remoteDirty = false;
 let remoteSaveOptions = { syncUsers: false };
+let lastUserInteractionAt = 0;
 
 const els = {
   appShell: document.querySelector("#appShell"),
@@ -117,6 +118,7 @@ init();
 
 async function init() {
   bindEvents();
+  trackUserActivity();
   await restoreRemoteSession();
   if (!remoteMode) {
     ensureDefaultUsers();
@@ -137,7 +139,7 @@ async function init() {
 
 function markAppReady() {
   if (!els.appStatus) return;
-  els.appStatus.textContent = remoteMode ? "App pronta - dati condivisi - sync 1.5s" : "App pronta";
+  els.appStatus.textContent = remoteMode ? "App pronta - dati condivisi - sync rapido" : "App pronta";
   els.appStatus.classList.add("ready");
 }
 
@@ -338,7 +340,7 @@ async function saveRemoteStateNow() {
 function startRemoteSync() {
   if (!remoteMode || !currentUser) return;
   stopRemoteSync();
-  remoteSyncTimer = window.setInterval(refreshRemoteState, 1500);
+  remoteSyncTimer = window.setInterval(refreshRemoteState, 750);
 }
 
 function stopRemoteSync() {
@@ -348,7 +350,7 @@ function stopRemoteSync() {
 
 async function refreshRemoteState() {
   if (!remoteMode || !currentUser || remoteDirty || remoteSaveInProgress) return;
-  if (isUserFormActive()) return;
+  if (isUiInteractionActive()) return;
   try {
     const data = await apiRequest(`/api/state?t=${Date.now()}`);
     if (!data.ok) {
@@ -360,10 +362,27 @@ async function refreshRemoteState() {
     saveLocalState();
     render();
     renderAuth();
-    if (els.appStatus) els.appStatus.textContent = "App pronta - dati condivisi - sync 1.5s";
+    if (els.appStatus) els.appStatus.textContent = "App pronta - dati condivisi - sync rapido";
   } catch {
     // Keep the current view usable if a temporary network issue occurs.
   }
+}
+
+function trackUserActivity() {
+  ["pointerdown", "keydown", "input", "change"].forEach((eventName) => {
+    document.addEventListener(eventName, () => {
+      lastUserInteractionAt = Date.now();
+    }, { capture: true, passive: true });
+  });
+}
+
+function isUiInteractionActive() {
+  const active = document.activeElement;
+  const activeTag = active?.tagName;
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(activeTag)) return true;
+  if (document.querySelector(".modal-backdrop.active")) return true;
+  if (Date.now() - lastUserInteractionAt < 900) return true;
+  return isUserFormActive();
 }
 
 function isUserFormActive() {
