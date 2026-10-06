@@ -192,6 +192,94 @@ select {
   display: block;
 }
 
+.home-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.home-hero {
+  border-radius: 8px;
+  display: block;
+  max-height: 480px;
+  object-fit: cover;
+  object-position: center;
+  width: 100%;
+}
+
+.home-visual-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(320px, .9fr) minmax(420px, 1.1fr);
+}
+
+.home-visual-card {
+  background: #f8fbff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.home-visual-card h2 {
+  font-size: 19px;
+  margin: 0 0 12px;
+}
+
+.italy-map,
+.tool-flow {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.map-land {
+  fill: #dbeafe;
+  stroke: #1f5fbf;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.map-island {
+  fill: #eaf2ff;
+  stroke: #1f5fbf;
+  stroke-width: 2;
+}
+
+.map-pin {
+  fill: #1f5fbf;
+  stroke: #fff;
+  stroke-width: 4;
+}
+
+.map-label,
+.flow-label {
+  fill: #172033;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.flow-step {
+  fill: #e8eef8;
+  stroke: #b9c8df;
+  stroke-width: 2;
+}
+
+.flow-step-primary {
+  fill: #1f5fbf;
+  stroke: #1f5fbf;
+}
+
+.flow-step-primary + .flow-label {
+  fill: #fff;
+}
+
+.flow-arrow {
+  fill: none;
+  marker-end: url(#flowArrow);
+  stroke: #1f5fbf;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
 .panel-head {
   align-items: start;
   display: flex;
@@ -556,6 +644,10 @@ td:first-child {
   .import-grid,
   .constraint-form {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .home-visual-grid {
+    grid-template-columns: 1fr;
   }
 
   .app-header,

@@ -161,6 +161,42 @@
         padding: 16px;
       }
       .tab-panel.active { display: block; }
+      .home-grid { display: grid; gap: 18px; }
+      .home-hero {
+        border-radius: 8px;
+        display: block;
+        max-height: 480px;
+        object-fit: cover;
+        object-position: center;
+        width: 100%;
+      }
+      .home-visual-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(320px, .9fr) minmax(420px, 1.1fr);
+      }
+      .home-visual-card {
+        background: #f8fbff;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .home-visual-card h2 { font-size: 19px; margin: 0 0 12px; }
+      .italy-map, .tool-flow { display: block; height: auto; width: 100%; }
+      .map-land { fill: #dbeafe; stroke: #1f5fbf; stroke-linejoin: round; stroke-width: 3; }
+      .map-island { fill: #eaf2ff; stroke: #1f5fbf; stroke-width: 2; }
+      .map-pin { fill: #1f5fbf; stroke: #fff; stroke-width: 4; }
+      .map-label, .flow-label { fill: #172033; font-size: 16px; font-weight: 900; }
+      .flow-step { fill: #e8eef8; stroke: #b9c8df; stroke-width: 2; }
+      .flow-step-primary { fill: #1f5fbf; stroke: #1f5fbf; }
+      .flow-step-primary + .flow-label { fill: #fff; }
+      .flow-arrow {
+        fill: none;
+        marker-end: url(#flowArrow);
+        stroke: #1f5fbf;
+        stroke-linecap: round;
+        stroke-width: 3;
+      }
       .panel-head { align-items: start; display: flex; gap: 16px; justify-content: space-between; margin-bottom: 14px; }
       .panel-head h2, .import-box h2, .next-actions h2 { font-size: 19px; margin: 0 0 4px; }
       .panel-head p, .import-box p { color: var(--muted); margin: 0; }
@@ -401,6 +437,7 @@
       }
       @media (max-width: 1100px) {
         .hero, .toolbar, .kpi-grid, .import-grid, .constraint-form { grid-template-columns: repeat(2, 1fr); }
+        .home-visual-grid { grid-template-columns: 1fr; }
         .app-header, .panel-head { align-items: stretch; flex-direction: column; }
       }
       @media (max-width: 680px) {
@@ -506,7 +543,8 @@
       </section>
 
       <nav class="tabs" aria-label="Sezioni">
-        <button class="active" data-tab="calendar" type="button">Calendario turni</button>
+        <button class="active" data-tab="home" type="button">Home</button>
+        <button data-tab="calendar" type="button">Calendario turni</button>
         <button data-tab="imports" type="button">Import dati</button>
         <button data-tab="forecastView" type="button">Forecast importato</button>
         <button data-tab="absencesView" type="button">Assenze importate</button>
@@ -517,7 +555,56 @@
         <button data-tab="log" type="button">Log modifiche</button>
       </nav>
 
-      <section class="tab-panel active" id="calendarPanel">
+      <section class="tab-panel active" id="homePanel">
+        <div class="home-grid">
+          <img class="home-hero" src="./assets/home-randazzo-planning.png" alt="Furgone Randazzo e pianificazione turni driver" />
+          <div class="home-visual-grid">
+            <article class="home-visual-card">
+              <h2>Sedi operative</h2>
+              <svg class="italy-map" viewBox="0 0 420 520" role="img" aria-label="Mappa Italia con sedi OSI2 Messina, DSI2 Catania e DLZ3 Roma">
+                <path class="map-land" d="M204 26 C182 45 178 70 190 94 C204 122 186 141 164 157 C137 177 133 203 158 222 C181 240 182 265 162 289 C145 310 153 334 179 346 C207 359 214 382 202 405 C191 426 203 449 228 458 C254 467 278 455 287 432 C296 410 289 388 266 371 C244 355 242 333 259 314 C279 292 273 268 247 253 C222 238 217 214 234 195 C254 173 247 149 219 136 C193 124 190 102 208 83 C226 64 225 43 204 26 Z" />
+                <path class="map-island" d="M160 424 C126 420 96 432 78 455 C104 472 145 478 182 463 C184 444 176 431 160 424 Z" />
+                <path class="map-island" d="M306 365 C330 353 354 360 366 383 C347 395 318 397 294 386 C292 377 297 369 306 365 Z" />
+                <circle class="map-pin" cx="202" cy="228" r="11" />
+                <text class="map-label" x="220" y="232">Roma - DLZ3</text>
+                <circle class="map-pin" cx="216" cy="448" r="11" />
+                <text class="map-label" x="238" y="453">Messina - OSI2</text>
+                <circle class="map-pin" cx="196" cy="467" r="11" />
+                <text class="map-label" x="218" y="491">Catania - DSI2</text>
+              </svg>
+            </article>
+            <article class="home-visual-card">
+              <h2>Flusso operativo del tool</h2>
+              <svg class="tool-flow" viewBox="0 0 820 300" role="img" aria-label="Import Forecast, Import Dipendenti, Import Assenze, Set Vincoli, Ottimizza turni, Modifica Turni">
+                <defs>
+                  <marker id="flowArrow" markerHeight="10" markerWidth="10" orient="auto" refX="9" refY="3">
+                    <path d="M0,0 L0,6 L9,3 z" fill="#1f5fbf"></path>
+                  </marker>
+                </defs>
+                <rect class="flow-step-primary" x="24" y="42" width="210" height="58" rx="10"></rect>
+                <text class="flow-label" x="129" y="77" text-anchor="middle">Import Forecast</text>
+                <path class="flow-arrow" d="M234 71 H282"></path>
+                <rect class="flow-step" x="294" y="42" width="220" height="58" rx="10"></rect>
+                <text class="flow-label" x="404" y="77" text-anchor="middle">Import Dipendenti</text>
+                <path class="flow-arrow" d="M514 71 H562"></path>
+                <rect class="flow-step" x="574" y="42" width="220" height="58" rx="10"></rect>
+                <text class="flow-label" x="684" y="77" text-anchor="middle">Import Assenze</text>
+                <path class="flow-arrow" d="M684 100 V138"></path>
+                <rect class="flow-step" x="574" y="156" width="220" height="58" rx="10"></rect>
+                <text class="flow-label" x="684" y="191" text-anchor="middle">Set Vincoli</text>
+                <path class="flow-arrow" d="M574 185 H526"></path>
+                <rect class="flow-step-primary" x="294" y="156" width="220" height="58" rx="10"></rect>
+                <text class="flow-label" x="404" y="191" text-anchor="middle">Ottimizza turni</text>
+                <path class="flow-arrow" d="M294 185 H246"></path>
+                <rect class="flow-step" x="24" y="156" width="210" height="58" rx="10"></rect>
+                <text class="flow-label" x="129" y="191" text-anchor="middle">Modifica Turni</text>
+              </svg>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="calendarPanel">
         <div class="panel-head">
           <div>
             <h2>Calendario turni</h2>
