@@ -487,6 +487,51 @@ td:first-child {
   color: #9a6700;
 }
 
+#dashboardTable th,
+#dashboardTable td {
+  font-size: 12px;
+  min-width: 112px;
+  white-space: normal;
+}
+
+#dashboardTable th:first-child,
+#dashboardTable td:first-child {
+  min-width: 118px;
+}
+
+.dashboard-week-confirmed {
+  background: #93c47d !important;
+  color: #102a12;
+  font-weight: 900;
+}
+
+.dashboard-total-label,
+.dashboard-total-row td {
+  font-weight: 900;
+}
+
+.dashboard-total-row td {
+  background: #eef4ff;
+}
+
+.dashboard-kpi-ok {
+  background: #e2f0d9;
+  color: #238000;
+  font-weight: 900;
+}
+
+.dashboard-kpi-warn {
+  background: #fff2cc;
+  color: #9a6700;
+  font-weight: 900;
+}
+
+.dashboard-kpi-bad {
+  background: #fce4d6;
+  color: #d00000;
+  font-weight: 900;
+}
+
 .import-grid {
   display: grid;
   gap: 14px;

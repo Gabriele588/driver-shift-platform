@@ -329,6 +329,14 @@
         background: #fff2cc;
         color: #9a6700;
       }
+      #dashboardTable th, #dashboardTable td { font-size: 12px; min-width: 112px; white-space: normal; }
+      #dashboardTable th:first-child, #dashboardTable td:first-child { min-width: 118px; }
+      .dashboard-week-confirmed { background: #93c47d !important; color: #102a12; font-weight: 900; }
+      .dashboard-total-label, .dashboard-total-row td { font-weight: 900; }
+      .dashboard-total-row td { background: #eef4ff; }
+      .dashboard-kpi-ok { background: #e2f0d9; color: #238000; font-weight: 900; }
+      .dashboard-kpi-warn { background: #fff2cc; color: #9a6700; font-weight: 900; }
+      .dashboard-kpi-bad { background: #fce4d6; color: #d00000; font-weight: 900; }
       .import-grid { display: grid; gap: 14px; grid-template-columns: repeat(3, 1fr); }
       .import-box { border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
       .import-box code { background: #eef2f7; border-radius: 4px; padding: 2px 4px; }
@@ -505,7 +513,9 @@
           <select id="weeksInput">
             <option value="1">1</option>
             <option value="2">2</option>
+            <option value="3">3</option>
             <option value="4">4</option>
+            <option value="5">5</option>
             <option value="6" selected>6</option>
           </select>
         </label>
@@ -557,6 +567,7 @@
         <button data-tab="drivers" type="button">Dipendenti</button>
         <button data-tab="users" type="button" data-admin-tab>Utenti</button>
         <button data-tab="log" type="button">Log modifiche</button>
+        <button data-tab="dashboard" type="button">Dashboard</button>
       </nav>
 
       <section class="tab-panel active" id="homePanel">
@@ -637,7 +648,7 @@
         <div class="panel-head">
           <div>
             <h2>Vincoli turni</h2>
-            <p>La X forzata impone il turno, compatibilmente con F/M. La R forzata è ammessa solo fuori dai giorni contrattuali.</p>
+            <p>La X forzata impone il turno, compatibilmente con F/M. La R forzata impone il riposo anche nei giorni contrattuali.</p>
           </div>
         </div>
         <form class="constraint-form" id="constraintForm">
@@ -799,6 +810,18 @@
           <table id="logTable"></table>
         </div>
       </section>
+
+      <section class="tab-panel" id="dashboardPanel">
+        <div class="panel-head">
+          <div>
+            <h2>Dashboard</h2>
+            <p>Riepilogo settimana per settimana comandato dai filtri in alto: filiale, data di partenza e numero settimane.</p>
+          </div>
+        </div>
+        <div class="table-wrap compact">
+          <table id="dashboardTable"></table>
+        </div>
+      </section>
     </main>
 
     <div class="modal-backdrop" id="dateActionModal" role="dialog" aria-modal="true" aria-labelledby="dateActionTitle">
@@ -908,6 +931,7 @@ const els = {
   actualRoutesTable: document.querySelector("#actualRoutesTable"),
   driversTable: document.querySelector("#driversTable"),
   logTable: document.querySelector("#logTable"),
+  dashboardTable: document.querySelector("#dashboardTable"),
   usersTable: document.querySelector("#usersTable"),
   userForm: document.querySelector("#userForm"),
   userFullName: document.querySelector("#userFullName"),
@@ -1419,6 +1443,7 @@ function render() {
   renderDrivers();
   renderUsers();
   renderLog();
+  renderDashboard();
   renderKpis();
   renderAuth();
 }
@@ -1849,6 +1874,153 @@ function renderLog() {
   els.logTable.innerHTML = `<thead><tr><th>Timestamp</th><th>Utente</th><th>Filiale</th><th>Data</th><th>Driver</th><th>Azione</th><th>Modifica</th></tr></thead><tbody>${rows || emptyRow(7)}</tbody>`;
 }
 
+function renderDashboard() {
+  if (!els.dashboardTable) return;
+  const drivers = filteredDrivers();
+  const weeks = weekBuckets(visibleDates());
+  const weekRows = weeks.map((dates) => dashboardMetricsForDates(dates, drivers));
+  const total = dashboardTotalMetrics(weekRows);
+  const rows = [...weekRows, total].map((metrics) => renderDashboardRow(metrics)).join("");
+  els.dashboardTable.innerHTML = `<thead><tr>
+    <th>Week</th>
+    <th>Fabbisogno rotte</th>
+    <th>Rotte pianificate (X)</th>
+    <th>Diff. Fabbisogno - X</th>
+    <th>Presenze supplementari</th>
+    <th>Ferie (F)</th>
+    <th>Malattia (M)</th>
+    <th>Lista gialla (G)</th>
+    <th>Abortive (A)</th>
+    <th>Navette (N)</th>
+    <th>KPI1 Saturazione media</th>
+    <th>KPI2 Assenze</th>
+    <th>KPI3 Malattie</th>
+    <th>Insaturazioni (B)</th>
+    <th>% Insaturazione</th>
+  </tr></thead><tbody>${rows || emptyRow(15)}</tbody>`;
+}
+
+function dashboardMetricsForDates(dates, drivers) {
+  const counters = { X: 0, F: 0, M: 0, G: 0, A: 0, N: 0, B: 0 };
+  let contractDays = 0;
+  let saturationDays = 0;
+  drivers.forEach((driver) => {
+    contractDays += dates.filter((date) => driver.contractDays.includes(dayIndex(date))).length;
+    const driverSaturationDays = dates.filter((date) => SATURATION_SYMBOLS.has(getCell(driver.id, date))).length;
+    saturationDays += driverSaturationDays;
+    dates.forEach((date) => {
+      const cell = getCell(driver.id, date);
+      if (cell === "X" || cell === "XL") counters.X += 1;
+      else if (counters[cell] !== undefined) counters[cell] += 1;
+    });
+  });
+  const need = dates.reduce((sum, date) => sum + routeNeed(date), 0);
+  const diff = need - counters.X;
+  const extra = drivers.reduce((sum, driver) => {
+    const assigned = dates.filter((date) => SATURATION_SYMBOLS.has(getCell(driver.id, date))).length;
+    const expected = dates.filter((date) => driver.contractDays.includes(dayIndex(date))).length;
+    return sum + Math.max(0, assigned - expected);
+  }, 0);
+  const saturationPercent = percent(saturationDays, contractDays);
+  const absencePercent = percent(counters.F, counters.X);
+  const sicknessPercent = percent(counters.M, counters.X);
+  const holePercent = percent(counters.B, contractDays);
+  const confirmed = dates.every((date) => state.confirmedDates.includes(date));
+  return {
+    label: `Week${isoWeekNumber(dates[0])}`,
+    need,
+    planned: counters.X,
+    diff,
+    extra,
+    F: counters.F,
+    M: counters.M,
+    G: counters.G,
+    A: counters.A,
+    N: counters.N,
+    saturationPercent,
+    absencePercent,
+    sicknessPercent,
+    B: counters.B,
+    holePercent,
+    contractDays,
+    saturationDays,
+    confirmed,
+    total: false
+  };
+}
+
+function dashboardTotalMetrics(rows) {
+  const total = rows.reduce((acc, row) => {
+    ["need", "planned", "diff", "extra", "F", "M", "G", "A", "N", "B", "contractDays", "saturationDays"].forEach((key) => {
+      acc[key] = (acc[key] || 0) + Number(row[key] || 0);
+    });
+    return acc;
+  }, { label: "Totale week", confirmed: false, total: true });
+  total.saturationPercent = percent(total.saturationDays, total.contractDays);
+  total.absencePercent = percent(total.F, total.planned);
+  total.sicknessPercent = percent(total.M, total.planned);
+  total.holePercent = percent(total.B, total.contractDays);
+  return total;
+}
+
+function renderDashboardRow(metrics) {
+  const weekClass = metrics.confirmed ? "dashboard-week-confirmed" : metrics.total ? "dashboard-total-label" : "";
+  const rowClass = metrics.total ? " class=\"dashboard-total-row\"" : "";
+  return `<tr${rowClass}>
+    <td class="${weekClass}">${escapeHtml(metrics.label)}</td>
+    <td>${metrics.need}</td>
+    <td>${metrics.planned}</td>
+    <td class="${dashboardDiffClass(metrics.diff)}">${metrics.diff}</td>
+    <td>${metrics.extra}</td>
+    <td>${metrics.F}</td>
+    <td>${metrics.M}</td>
+    <td>${metrics.G}</td>
+    <td>${metrics.A}</td>
+    <td>${metrics.N}</td>
+    <td class="${dashboardSaturationClass(metrics.saturationPercent)}">${formatPercent(metrics.saturationPercent)}</td>
+    <td class="${absenceClass(metrics.absencePercent)}">${formatPercent(metrics.absencePercent)}</td>
+    <td class="${sicknessClass(metrics.sicknessPercent)}">${formatPercent(metrics.sicknessPercent)}</td>
+    <td>${metrics.B}</td>
+    <td class="${insaturationClass(metrics.holePercent)}">${formatPercent(metrics.holePercent)}</td>
+  </tr>`;
+}
+
+function dashboardDiffClass(value) {
+  if (value === 0) return "daily-delta-ok";
+  if (value > 0) return "daily-delta-low";
+  return "daily-delta-high";
+}
+
+function dashboardSaturationClass(value) {
+  if (value === 100) return "dashboard-kpi-ok";
+  if (value > 100) return "dashboard-kpi-bad";
+  return "dashboard-kpi-warn";
+}
+
+function absenceClass(value) {
+  if (value <= 12.6) return "dashboard-kpi-ok";
+  if (value <= 15) return "dashboard-kpi-warn";
+  return "dashboard-kpi-bad";
+}
+
+function sicknessClass(value) {
+  if (value > 5) return "dashboard-kpi-bad";
+  if (value >= 3) return "dashboard-kpi-warn";
+  return "dashboard-kpi-ok";
+}
+
+function insaturationClass(value) {
+  return value === 0 ? "dashboard-kpi-ok" : "dashboard-kpi-bad";
+}
+
+function percent(numerator, denominator) {
+  return denominator ? (Number(numerator || 0) / Number(denominator || 0)) * 100 : 0;
+}
+
+function formatPercent(value) {
+  return `${Number(value || 0).toFixed(1)}%`;
+}
+
 function renderKpis() {
   const dates = visibleDates();
   const drivers = filteredDrivers();
@@ -2068,7 +2240,6 @@ function applyConstraints(plan, drivers, dates) {
     if (!driver || !dates.includes(constraint.date)) return;
     const current = getCellFromPlan(plan, driver.id, constraint.date);
     if (current === "F" || current === "M") return;
-    if (constraint.type === "R" && driver.contractDays.includes(dayIndex(constraint.date))) return;
     setCellInPlan(plan, driver.id, constraint.date, constraint.type === "X" ? "XL" : "RL");
   });
 }
@@ -2128,10 +2299,6 @@ function addConstraint(event) {
   const date = els.constraintDate.value;
   const type = els.constraintType.value;
   if (!driver || !date) return;
-  if (type === "R" && driver.contractDays.includes(dayIndex(date))) {
-    showToast("La R forzata può essere inserita solo fuori dai giorni contrattuali");
-    return;
-  }
   state.constraints = state.constraints.filter((item) => !(item.driverId === driver.id && item.date === date));
   state.constraints.push({ id: makeId(), driverId: driver.id, date, type });
   addLog("Vincolo aggiunto", date, driver.name, "", type);
@@ -2774,6 +2941,14 @@ function addDays(date, days) {
 
 function dayIndex(date) {
   return (new Date(`${date}T12:00:00`).getDay() + 6) % 7;
+}
+
+function isoWeekNumber(date) {
+  const current = new Date(`${date}T12:00:00`);
+  const day = current.getDay() || 7;
+  current.setDate(current.getDate() + 4 - day);
+  const yearStart = new Date(current.getFullYear(), 0, 1);
+  return Math.ceil((((current - yearStart) / 86400000) + 1) / 7);
 }
 
 function toISO(date) {
