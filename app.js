@@ -53,6 +53,8 @@ const els = {
   forecastViewStation: document.querySelector("#forecastViewStation"),
   forecastViewWeek: document.querySelector("#forecastViewWeek"),
   absencesViewStation: document.querySelector("#absencesViewStation"),
+  absencesViewName: document.querySelector("#absencesViewName"),
+  absencesViewDetail: document.querySelector("#absencesViewDetail"),
   driverFilterStation: document.querySelector("#driverFilterStation"),
   driverFilterHours: document.querySelector("#driverFilterHours"),
   constraintsTable: document.querySelector("#constraintsTable"),
@@ -501,8 +503,13 @@ function bindEvents() {
   els.forecastViewStation?.addEventListener("change", () => renderForecastView());
   els.forecastViewWeek?.addEventListener("change", () => renderForecastView());
   els.absencesViewStation?.addEventListener("change", () => renderAbsencesView());
+  els.absencesViewName?.addEventListener("input", () => renderAbsencesView());
+  els.absencesViewDetail?.addEventListener("input", () => renderAbsencesView());
   els.driverFilterStation?.addEventListener("change", () => renderDrivers());
   els.driverFilterHours?.addEventListener("change", () => renderDrivers());
+  document.querySelectorAll("[data-export-table]").forEach((button) => {
+    button.addEventListener("click", () => exportTableCsv(button.dataset.exportTable, button.dataset.exportName || button.dataset.exportTable));
+  });
 
   els.algorithmContractBtn.addEventListener("click", () => runPlanning("contract"));
   els.algorithmSaturationBtn.addEventListener("click", () => runPlanning("saturation"));
@@ -552,6 +559,7 @@ function switchTab(tab) {
 }
 
 function render() {
+  normalizeDriverContracts();
   renderStationSelect();
   els.weekStartInput.value = state.weekStart;
   els.confirmDateInput.value = state.weekStart;
@@ -642,9 +650,13 @@ function renderForecastView() {
 function renderAbsencesView() {
   if (!els.absencesViewTable) return;
   const station = els.absencesViewStation?.value || "Tutte";
+  const nameFilter = normalizeName(els.absencesViewName?.value || "");
+  const detailFilter = normalizeName(els.absencesViewDetail?.value || "");
   const rows = state.absences
     .map((absence) => ({ absence, driver: state.drivers.find((driver) => (normalizeMatricola(absence.matricola) && normalizeMatricola(driver.matricola) === normalizeMatricola(absence.matricola)) || driver.id === absence.driverId) }))
     .filter(({ driver }) => driver && (station === "Tutte" || driver.station === station))
+    .filter(({ driver }) => !nameFilter || normalizeName(driver.name).includes(nameFilter))
+    .filter(({ absence }) => !detailFilter || normalizeName(absence.label || absence.type || "").includes(detailFilter))
     .sort((a, b) => `${a.absence.date}${a.driver.station}${a.driver.name}`.localeCompare(`${b.absence.date}${b.driver.station}${b.driver.name}`))
     .map(({ absence, driver }) => `<tr>
       <td>${escapeHtml(driver.id || "")}</td>
@@ -1969,6 +1981,25 @@ function exportPlanCsv() {
   download("piano_turni_driver.csv", rows.map((row) => row.map(csvEscape).join(";")).join("\n"));
 }
 
+function exportTableCsv(tableId, baseName) {
+  const table = document.querySelector(`#${tableId}`);
+  if (!table) {
+    showToast("Tabella non trovata");
+    return;
+  }
+  const rows = Array.from(table.querySelectorAll("tr"))
+    .map((row) => Array.from(row.querySelectorAll("th,td"))
+      .filter((cell) => !cell.classList.contains("row-actions"))
+      .map((cell) => clean(cell.innerText).replace(/\s+/g, " ")))
+    .filter((row) => row.length);
+  if (!rows.length) {
+    showToast("Nessun dato da esportare");
+    return;
+  }
+  const date = new Date().toISOString().slice(0, 10);
+  download(`${baseName}-${date}.csv`, rows.map((row) => row.map(csvEscape).join(";")).join("\n"));
+}
+
 function filteredDrivers() {
   return sortedDrivers(state.drivers.filter((driver) => driver.active !== false && driver.station === state.station));
 }
@@ -1983,6 +2014,14 @@ function driverById(id) {
 
 function driver(id, name, station, contract, weeklyHours, matricola, contractDays) {
   return { id, name, station, contract, weeklyHours, matricola, active: true, startDate: "", endDate: "", contractDays: contractDays || parseContractDays(contract) };
+}
+
+function normalizeDriverContracts() {
+  state.drivers.forEach((driver) => {
+    const parsed = parseContractDays(driver.contract || "");
+    const hasContractDayPattern = /lun|mar|mer|gio|ven|sab|dom|sabato|venerdi/i.test(driver.contract || "");
+    if (parsed.length && (!Array.isArray(driver.contractDays) || !driver.contractDays.length || hasContractDayPattern)) driver.contractDays = parsed;
+  });
 }
 
 function getCell(driverId, date) {
@@ -2101,9 +2140,6 @@ function normalizeDate(value) {
 
 function parseContractDays(value) {
   const text = clean(value).toLowerCase();
-  if (text.includes("lunedi a sabato") || text.includes("lun-sab")) return [0, 1, 2, 3, 4, 5];
-  if (text.includes("lunedi a venerdi") || text.includes("lun-ven")) return [0, 1, 2, 3, 4];
-  if (text.includes("sabato")) return [0, 1, 2, 3, 4, 5];
   const dayTokens = [
     ["lun", 0],
     ["mar", 1],
@@ -2113,8 +2149,19 @@ function parseContractDays(value) {
     ["sab", 5],
     ["dom", 6]
   ];
-  const parsed = dayTokens.filter(([token]) => text.includes(token)).map(([, index]) => index);
-  if (parsed.length) return Array.from(new Set(parsed)).sort((a, b) => a - b);
+  const explicitDays = [];
+  text.replace(/lun|mar|mer|gio|ven|sab|dom/g, (token) => {
+    const day = dayTokens.find(([name]) => name === token)?.[1];
+    if (day !== undefined && !explicitDays.includes(day)) explicitDays.push(day);
+    return token;
+  });
+  if (text.includes("24h") && explicitDays.length >= 3) return explicitDays.slice(0, 3);
+  if (text.includes("32h") && explicitDays.length >= 4) return explicitDays.slice(0, 4);
+  if (text.includes("39h") && explicitDays.length >= 5) return explicitDays;
+  if (text.includes("lunedi a sabato") || text.includes("lun-sab")) return [0, 1, 2, 3, 4, 5];
+  if (text.includes("lunedi a venerdi") || text.includes("lun-ven")) return [0, 1, 2, 3, 4];
+  if (text.includes("sabato")) return [0, 1, 2, 3, 4, 5];
+  if (explicitDays.length) return explicitDays;
   if (text.includes("24h")) return [0, 3, 4];
   if (text.includes("32h")) return [0, 1, 3, 4];
   if (text.includes("39h") && text.includes("lun")) return [0, 1, 2, 3, 4, 5];

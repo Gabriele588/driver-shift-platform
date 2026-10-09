@@ -616,6 +616,7 @@
             <button class="ghost" id="finishYellowListBtn" type="button" hidden>Termina lista gialla</button>
             <button class="ghost" id="finishModifyBtn" type="button" hidden>Termina modifiche</button>
             <button class="ghost" id="unlockDayBtn" type="button">Sblocca</button>
+            <button class="ghost" data-export-table="calendarTable" data-export-name="calendario-turni" type="button">Esporta CSV</button>
           </div>
         </div>
         <div class="legend" id="legend"></div>
@@ -650,6 +651,7 @@
             <h2>Vincoli turni</h2>
             <p>La X forzata impone il turno, compatibilmente con F/M. La R forzata impone il riposo anche nei giorni contrattuali.</p>
           </div>
+          <button class="ghost" data-export-table="constraintsTable" data-export-name="vincoli-turni" type="button">Esporta CSV</button>
         </div>
         <form class="constraint-form" id="constraintForm">
           <label>
@@ -688,6 +690,7 @@
             Filtra week
             <select id="forecastViewWeek"></select>
           </label>
+          <button class="ghost" data-export-table="forecastViewTable" data-export-name="forecast-importato" type="button">Esporta CSV</button>
         </div>
         <div class="table-wrap compact">
           <table id="forecastViewTable"></table>
@@ -704,6 +707,15 @@
             Filtra station
             <select id="absencesViewStation"></select>
           </label>
+          <label>
+            Filtra nominativo
+            <input id="absencesViewName" type="search" placeholder="Nome dipendente" />
+          </label>
+          <label>
+            Filtra dettaglio
+            <input id="absencesViewDetail" type="search" placeholder="Tipo assenza" />
+          </label>
+          <button class="ghost" data-export-table="absencesViewTable" data-export-name="assenze-importate" type="button">Esporta CSV</button>
         </div>
         <div class="table-wrap compact">
           <table id="absencesViewTable"></table>
@@ -725,6 +737,7 @@
               Filtra ore
               <select id="driverFilterHours"></select>
             </label>
+            <button class="ghost" data-export-table="driversTable" data-export-name="dipendenti" type="button">Esporta CSV</button>
           </div>
         </div>
         <div class="table-wrap compact">
@@ -738,6 +751,7 @@
             <h2>Consuntivo rotte</h2>
             <p>Quando una data/station ha un consuntivo, il fabbisogno usa quel valore e non il forecast.</p>
           </div>
+          <button class="ghost" data-export-table="actualRoutesTable" data-export-name="consuntivo-rotte" type="button">Esporta CSV</button>
         </div>
         <form class="constraint-form" id="actualRoutesForm">
           <label>
@@ -765,6 +779,7 @@
             <h2>Configurazione utenti</h2>
             <p>Gestione accessi disponibile per Amministratore e Key Account Manager.</p>
           </div>
+          <button class="ghost" data-export-table="usersTable" data-export-name="utenti" type="button">Esporta CSV</button>
         </div>
         <form class="constraint-form" id="userForm">
           <label>
@@ -804,7 +819,10 @@
             <h2>Log modifiche</h2>
             <p>Traccia modifiche su giornate confermate e operazioni principali.</p>
           </div>
-          <button class="ghost" id="clearLogBtn" type="button">Svuota log</button>
+          <div class="panel-actions">
+            <button class="ghost" data-export-table="logTable" data-export-name="log-modifiche" type="button">Esporta CSV</button>
+            <button class="ghost" id="clearLogBtn" type="button">Svuota log</button>
+          </div>
         </div>
         <div class="table-wrap compact">
           <table id="logTable"></table>
@@ -817,6 +835,7 @@
             <h2>Dashboard</h2>
             <p>Riepilogo settimana per settimana comandato dai filtri in alto: filiale, data di partenza e numero settimane.</p>
           </div>
+          <button class="ghost" data-export-table="dashboardTable" data-export-name="dashboard" type="button">Esporta CSV</button>
         </div>
         <div class="table-wrap compact">
           <table id="dashboardTable"></table>
@@ -925,6 +944,8 @@ const els = {
   forecastViewStation: document.querySelector("#forecastViewStation"),
   forecastViewWeek: document.querySelector("#forecastViewWeek"),
   absencesViewStation: document.querySelector("#absencesViewStation"),
+  absencesViewName: document.querySelector("#absencesViewName"),
+  absencesViewDetail: document.querySelector("#absencesViewDetail"),
   driverFilterStation: document.querySelector("#driverFilterStation"),
   driverFilterHours: document.querySelector("#driverFilterHours"),
   constraintsTable: document.querySelector("#constraintsTable"),
@@ -1373,8 +1394,13 @@ function bindEvents() {
   els.forecastViewStation?.addEventListener("change", () => renderForecastView());
   els.forecastViewWeek?.addEventListener("change", () => renderForecastView());
   els.absencesViewStation?.addEventListener("change", () => renderAbsencesView());
+  els.absencesViewName?.addEventListener("input", () => renderAbsencesView());
+  els.absencesViewDetail?.addEventListener("input", () => renderAbsencesView());
   els.driverFilterStation?.addEventListener("change", () => renderDrivers());
   els.driverFilterHours?.addEventListener("change", () => renderDrivers());
+  document.querySelectorAll("[data-export-table]").forEach((button) => {
+    button.addEventListener("click", () => exportTableCsv(button.dataset.exportTable, button.dataset.exportName || button.dataset.exportTable));
+  });
 
   els.algorithmContractBtn.addEventListener("click", () => runPlanning("contract"));
   els.algorithmSaturationBtn.addEventListener("click", () => runPlanning("saturation"));
@@ -1424,6 +1450,7 @@ function switchTab(tab) {
 }
 
 function render() {
+  normalizeDriverContracts();
   renderStationSelect();
   els.weekStartInput.value = state.weekStart;
   els.confirmDateInput.value = state.weekStart;
@@ -1514,9 +1541,13 @@ function renderForecastView() {
 function renderAbsencesView() {
   if (!els.absencesViewTable) return;
   const station = els.absencesViewStation?.value || "Tutte";
+  const nameFilter = normalizeName(els.absencesViewName?.value || "");
+  const detailFilter = normalizeName(els.absencesViewDetail?.value || "");
   const rows = state.absences
     .map((absence) => ({ absence, driver: state.drivers.find((driver) => (normalizeMatricola(absence.matricola) && normalizeMatricola(driver.matricola) === normalizeMatricola(absence.matricola)) || driver.id === absence.driverId) }))
     .filter(({ driver }) => driver && (station === "Tutte" || driver.station === station))
+    .filter(({ driver }) => !nameFilter || normalizeName(driver.name).includes(nameFilter))
+    .filter(({ absence }) => !detailFilter || normalizeName(absence.label || absence.type || "").includes(detailFilter))
     .sort((a, b) => `${a.absence.date}${a.driver.station}${a.driver.name}`.localeCompare(`${b.absence.date}${b.driver.station}${b.driver.name}`))
     .map(({ absence, driver }) => `<tr>
       <td>${escapeHtml(driver.id || "")}</td>
@@ -2841,6 +2872,25 @@ function exportPlanCsv() {
   download("piano_turni_driver.csv", rows.map((row) => row.map(csvEscape).join(";")).join("\n"));
 }
 
+function exportTableCsv(tableId, baseName) {
+  const table = document.querySelector(`#${tableId}`);
+  if (!table) {
+    showToast("Tabella non trovata");
+    return;
+  }
+  const rows = Array.from(table.querySelectorAll("tr"))
+    .map((row) => Array.from(row.querySelectorAll("th,td"))
+      .filter((cell) => !cell.classList.contains("row-actions"))
+      .map((cell) => clean(cell.innerText).replace(/\s+/g, " ")))
+    .filter((row) => row.length);
+  if (!rows.length) {
+    showToast("Nessun dato da esportare");
+    return;
+  }
+  const date = new Date().toISOString().slice(0, 10);
+  download(`${baseName}-${date}.csv`, rows.map((row) => row.map(csvEscape).join(";")).join("\n"));
+}
+
 function filteredDrivers() {
   return sortedDrivers(state.drivers.filter((driver) => driver.active !== false && driver.station === state.station));
 }
@@ -2855,6 +2905,14 @@ function driverById(id) {
 
 function driver(id, name, station, contract, weeklyHours, matricola, contractDays) {
   return { id, name, station, contract, weeklyHours, matricola, active: true, startDate: "", endDate: "", contractDays: contractDays || parseContractDays(contract) };
+}
+
+function normalizeDriverContracts() {
+  state.drivers.forEach((driver) => {
+    const parsed = parseContractDays(driver.contract || "");
+    const hasContractDayPattern = /lun|mar|mer|gio|ven|sab|dom|sabato|venerdi/i.test(driver.contract || "");
+    if (parsed.length && (!Array.isArray(driver.contractDays) || !driver.contractDays.length || hasContractDayPattern)) driver.contractDays = parsed;
+  });
 }
 
 function getCell(driverId, date) {
@@ -2973,9 +3031,6 @@ function normalizeDate(value) {
 
 function parseContractDays(value) {
   const text = clean(value).toLowerCase();
-  if (text.includes("lunedi a sabato") || text.includes("lun-sab")) return [0, 1, 2, 3, 4, 5];
-  if (text.includes("lunedi a venerdi") || text.includes("lun-ven")) return [0, 1, 2, 3, 4];
-  if (text.includes("sabato")) return [0, 1, 2, 3, 4, 5];
   const dayTokens = [
     ["lun", 0],
     ["mar", 1],
@@ -2985,8 +3040,19 @@ function parseContractDays(value) {
     ["sab", 5],
     ["dom", 6]
   ];
-  const parsed = dayTokens.filter(([token]) => text.includes(token)).map(([, index]) => index);
-  if (parsed.length) return Array.from(new Set(parsed)).sort((a, b) => a - b);
+  const explicitDays = [];
+  text.replace(/lun|mar|mer|gio|ven|sab|dom/g, (token) => {
+    const day = dayTokens.find(([name]) => name === token)?.[1];
+    if (day !== undefined && !explicitDays.includes(day)) explicitDays.push(day);
+    return token;
+  });
+  if (text.includes("24h") && explicitDays.length >= 3) return explicitDays.slice(0, 3);
+  if (text.includes("32h") && explicitDays.length >= 4) return explicitDays.slice(0, 4);
+  if (text.includes("39h") && explicitDays.length >= 5) return explicitDays;
+  if (text.includes("lunedi a sabato") || text.includes("lun-sab")) return [0, 1, 2, 3, 4, 5];
+  if (text.includes("lunedi a venerdi") || text.includes("lun-ven")) return [0, 1, 2, 3, 4];
+  if (text.includes("sabato")) return [0, 1, 2, 3, 4, 5];
+  if (explicitDays.length) return explicitDays;
   if (text.includes("24h")) return [0, 3, 4];
   if (text.includes("32h")) return [0, 1, 3, 4];
   if (text.includes("39h") && text.includes("lun")) return [0, 1, 2, 3, 4, 5];
