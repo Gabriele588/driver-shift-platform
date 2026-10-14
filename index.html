@@ -807,7 +807,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
               <label>Station <select id="driverStation" required></select></label>
               <label>ID DRIVER <input id="driverId" required maxlength="80" /></label>
               <label>NOME E COGNOME <input id="driverName" required maxlength="150" /></label>
-              <label>CONTRATTO <input id="driverContract" required placeholder="LUN-MAR-MER_24h" /></label>
+              <label>CONTRATTO <select id="driverContract" required></select></label>
               <label>Stato <select id="driverStatus"><option value="Attivo">Attivo</option><option value="Cessato">Cessato</option></select></label>
               <label>Data inizio contratto <input id="driverStartDate" type="date" /></label>
               <label>Data fine contratto <input id="driverEndDate" type="date" /></label>
@@ -1884,13 +1884,27 @@ function openDriverModal(id = "") {
   els.driverStation.value = existing?.station || (stations.includes(state.station) ? state.station : stations[0]);
   els.driverId.value = existing?.id || "";
   els.driverName.value = existing?.name || "";
-  els.driverContract.value = existing?.contract || "";
+  renderDriverContractOptions();
+  els.driverContract.value = existing ? normalizeContract(existing.contract) : "";
   els.driverStatus.value = existing?.status || (existing?.active === false ? "Cessato" : "Attivo");
   els.driverStartDate.value = existing?.startDate || "";
   els.driverEndDate.value = existing?.endDate || "";
   els.driverMatricola.value = existing?.matricola || "";
   els.driverDuration.value = existing?.duration === "TD" ? "TD" : "TI";
   els.driverModal.classList.add("active");
+}
+
+function renderDriverContractOptions() {
+  const days = ["LUN", "MAR", "MER", "GIO", "VEN", "SAB", "DOM"];
+  const combinations = (count, start = 0, selected = []) => {
+    if (selected.length === count) return [selected.join("-")];
+    return days.slice(start).flatMap((day, index) => combinations(count, start + index + 1, [...selected, day]));
+  };
+  const groups = [[3, "24h"], [4, "32h"], [5, "39h"]].map(([count, hours]) =>
+    `<optgroup label="${count} giorni · ${hours}">${combinations(count).map((days) =>
+      `<option value="${days}_${hours}">${days}_${hours}</option>`).join("")}</optgroup>`);
+  els.driverContract.innerHTML = `<option value="">Seleziona giorni e ore contrattuali</option>${groups.join("")}` +
+    `<optgroup label="Contratto lunedì–sabato"><option value="da lunedi a sabato_39h">da lunedi a sabato_39h</option></optgroup>`;
 }
 
 function closeDriverModal() {
@@ -1906,10 +1920,11 @@ function saveDriverForm(event) {
   if (!canAccessStation(station) || (existing && !canAccessStation(existing.station))) return showToast("Filiale non autorizzata");
   const id = clean(els.driverId.value);
   const matricola = normalizeMatricola(els.driverMatricola.value);
-  const contract = clean(els.driverContract.value);
+  const contract = normalizeContract(els.driverContract.value);
   const startDate = els.driverStartDate.value;
   const endDate = els.driverEndDate.value;
-  if (!id || !clean(els.driverName.value) || !matricola || !contract) return showToast("Compila tutti i campi obbligatori");
+  if (!id || !clean(els.driverName.value) || !matricola) return showToast("Compila tutti i campi obbligatori");
+  if (!contract) return showToast("Seleziona un contratto valido dal menu");
   if (endDate && startDate && endDate < startDate) return showToast("La data di fine precede quella di inizio");
   if (state.drivers.some((item) => item !== existing && (item.id.toLowerCase() === id.toLowerCase() || normalizeMatricola(item.matricola) === matricola))) return showToast("ID driver o matricola già presenti");
   const status = els.driverStatus.value;
@@ -2771,12 +2786,16 @@ function importDrivers(rows) {
     const matricola = normalizeMatricola(getField(row, ["matricola_ts", "matricola", "employee_code"]));
     const id = clean(getField(row, ["id_driver", "id", "driver_id"])) || nextInternalId();
     const name = clean(getField(row, ["nome_e_cognome", "name", "nome"]) || id);
-    const contract = clean(getField(row, ["contratto", "contract"]) || "da lunedi a venerdi");
+    const contract = normalizeContract(getField(row, ["contratto", "contract"]));
+    if (!contract) {
+      stats.skipped += 1;
+      return;
+    }
     const status = clean(getField(row, ["stato", "active"])).toLowerCase();
     const startDate = normalizeDate(getField(row, ["data_inizio_contratto", "data_inizio", "start_date"]));
     const endDate = normalizeDate(getField(row, ["data_fine_contratto", "data_fine", "end_date"]));
     const duration = clean(getField(row, ["durata_contr", "durata_contratto", "duration"])).toUpperCase();
-    const weeklyHours = parseNumber(getField(row, ["weekly_hours", "hours", "ore"])) || inferWeeklyHours(contract);
+    const weeklyHours = inferWeeklyHours(contract);
     const driver = {
       id,
       name,
@@ -2804,7 +2823,7 @@ function importDrivers(rows) {
   const validMatricole = new Set(state.drivers.map((driver) => normalizeMatricola(driver.matricola)).filter(Boolean));
   const validDriverIds = new Set(state.drivers.map((driver) => driver.id));
   state.absences = state.absences.filter((absence) => validMatricole.has(normalizeMatricola(absence.matricola)) || validDriverIds.has(absence.driverId));
-  const summary = formatImportSummary("Dipendenti", stats, "dipendenti");
+  const summary = `${formatImportSummary("Dipendenti", stats, "dipendenti")} | contratti non validi: ${stats.skipped}`;
   addLog("Import dipendenti", "", "", "", summary);
   saveAndRender();
   return summary;
@@ -3356,6 +3375,22 @@ function normalizeDate(value) {
   if (!match) return "";
   const year = match[3].length === 2 ? `20${match[3]}` : match[3];
   return `${year}-${match[2].padStart(2, "0")}-${match[1].padStart(2, "0")}`;
+}
+
+function normalizeContract(value) {
+  const raw = clean(value).toUpperCase().replace(/\s+/g, " ");
+  if (/^DA LUNEDI A SABATO_39H$/.test(raw)) return "da lunedi a sabato_39h";
+  if (/^DA LUNEDI A VENERDI(?:_39H)?$/.test(raw)) return "LUN-MAR-MER-GIO-VEN_39h";
+  const match = raw.match(/^(.+?)[_\s-]+(24|32|39)H$/);
+  if (!match) return "";
+  const prefix = match[1].replace(/GIOV/g, "GIO");
+  const tokens = prefix.match(/LUN|MAR|MER|GIO|VEN|SAB|DOM/g) || [];
+  if (prefix.replace(/LUN|MAR|MER|GIO|VEN|SAB|DOM/g, "").replace(/[-_\s]/g, "") ||
+      new Set(tokens).size !== tokens.length) return "";
+  const expected = { 24: 3, 32: 4, 39: 5 }[Number(match[2])];
+  if (tokens.length !== expected) return "";
+  const order = ["LUN", "MAR", "MER", "GIO", "VEN", "SAB", "DOM"];
+  return `${tokens.sort((a, b) => order.indexOf(a) - order.indexOf(b)).join("-")}_${match[2]}h`;
 }
 
 function parseContractDays(value) {
