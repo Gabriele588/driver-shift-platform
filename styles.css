@@ -678,6 +678,15 @@ td:first-child {
   margin-top: 14px;
 }
 
+.driver-modal { max-width: 850px; width: min(850px, 100%); }
+.driver-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.driver-form-grid label { display: flex; flex-direction: column; gap: 5px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.driver-form-grid input, .driver-form-grid select { width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: #fff; }
+#driversTable [data-driver-row] { cursor: pointer; }
+#driversTable .driver-selected { background: #e8f1ff; }
+button:disabled { cursor: not-allowed; opacity: .5; }
+@media (max-width: 680px) { .driver-form-grid { grid-template-columns: 1fr; } }
+
 .check-list {
   border: 1px solid var(--line);
   border-radius: 8px;

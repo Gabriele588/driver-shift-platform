@@ -30,6 +30,8 @@ let remoteDirty = false;
 let remoteSaveOptions = { syncUsers: false };
 let lastUserInteractionAt = 0;
 let lastLocalMutationAt = 0;
+let selectedDriverId = "";
+let editingDriverId = "";
 
 const els = {
   appShell: document.querySelector("#appShell"),
@@ -58,6 +60,20 @@ const els = {
   driverFilterStation: document.querySelector("#driverFilterStation"),
   driverFilterHours: document.querySelector("#driverFilterHours"),
   driverFilterName: document.querySelector("#driverFilterName"),
+  addDriverBtn: document.querySelector("#addDriverBtn"),
+  editDriverBtn: document.querySelector("#editDriverBtn"),
+  driverModal: document.querySelector("#driverModal"),
+  driverModalTitle: document.querySelector("#driverModalTitle"),
+  driverForm: document.querySelector("#driverForm"),
+  driverStation: document.querySelector("#driverStation"),
+  driverId: document.querySelector("#driverId"),
+  driverName: document.querySelector("#driverName"),
+  driverContract: document.querySelector("#driverContract"),
+  driverStatus: document.querySelector("#driverStatus"),
+  driverStartDate: document.querySelector("#driverStartDate"),
+  driverEndDate: document.querySelector("#driverEndDate"),
+  driverMatricola: document.querySelector("#driverMatricola"),
+  driverDuration: document.querySelector("#driverDuration"),
   constraintsTable: document.querySelector("#constraintsTable"),
   actualRoutesTable: document.querySelector("#actualRoutesTable"),
   driversTable: document.querySelector("#driversTable"),
@@ -514,6 +530,10 @@ function bindEvents() {
   els.driverFilterStation?.addEventListener("change", () => renderDrivers());
   els.driverFilterHours?.addEventListener("change", () => renderDrivers());
   els.driverFilterName?.addEventListener("input", () => renderDrivers());
+  els.addDriverBtn?.addEventListener("click", () => openDriverModal());
+  els.editDriverBtn?.addEventListener("click", () => openDriverModal(selectedDriverId));
+  document.querySelector("#cancelDriverBtn")?.addEventListener("click", closeDriverModal);
+  els.driverForm?.addEventListener("submit", saveDriverForm);
   document.querySelectorAll("[data-export-table]").forEach((button) => {
     button.addEventListener("click", () => exportTableCsv(button.dataset.exportTable, button.dataset.exportName || button.dataset.exportTable));
   });
@@ -859,28 +879,107 @@ function renderDrivers() {
   const hours = els.driverFilterHours?.value || "Tutte";
   const nameFilter = normalizeName(els.driverFilterName?.value || "");
   const drivers = sortedDrivers(state.drivers.filter((driver) => {
-    if (driver.active === false) return false;
     if (!canAccessStation(driver.station)) return false;
     if (station !== "Tutte" && driver.station !== station) return false;
     if (hours !== "Tutte" && String(driver.weeklyHours) !== hours) return false;
     if (nameFilter && !normalizeName(driver.name).includes(nameFilter)) return false;
     return true;
   }));
-  const rows = drivers.map((driver) => `<tr>
+  const rows = drivers.map((driver) => `<tr data-driver-row="${escapeHtml(driver.id)}" class="${selectedDriverId === driver.id ? "driver-selected" : ""}">
+    <td><input type="radio" name="selectedDriver" value="${escapeHtml(driver.id)}" aria-label="Seleziona ${escapeHtml(driver.name)}" ${selectedDriverId === driver.id ? "checked" : ""}></td>
+    <td>${escapeHtml(driver.station)}</td>
     <td>${escapeHtml(driver.id)}</td>
     <td>${escapeHtml(driver.name)}</td>
-    <td>${escapeHtml(driver.station)}</td>
-    <td>${escapeHtml(driver.matricola || "")}</td>
     <td>${escapeHtml(driver.contract)}</td>
-    <td>${driver.startDate ? formatShortDate(driver.startDate) : ""}</td>
-    <td><input class="table-date-input" data-driver-end-date="${escapeHtml(driver.id)}" type="date" value="${escapeHtml(driver.endDate || "")}" /></td>
-    <td>${driver.weeklyHours}</td>
-    <td>${escapeHtml(contractDaysLabel(driver))}</td>
+    <td>${escapeHtml(driver.status || (driver.active === false ? "Cessato" : "Attivo"))}</td>
+    <td>${escapeHtml(driver.startDate || "")}</td>
+    <td>${escapeHtml(driver.endDate || "")}</td>
+    <td>${escapeHtml(driver.matricola || "")}</td>
+    <td>${escapeHtml(driver.duration || "TI")}</td>
   </tr>`).join("");
-  els.driversTable.innerHTML = `<thead><tr><th>ID</th><th>Nome</th><th>Station</th><th>Matricola</th><th>Contratto</th><th>Data inizio</th><th>Data fine</th><th>Ore</th><th>Giorni</th></tr></thead><tbody>${rows || emptyRow(9)}</tbody>`;
-  els.driversTable.querySelectorAll("[data-driver-end-date]").forEach((input) => {
-    input.addEventListener("change", () => updateDriverEndDate(input.dataset.driverEndDate, input.value));
+  els.driversTable.innerHTML = `<thead><tr><th>Seleziona</th><th>Station</th><th>ID DRIVER</th><th>NOME E COGNOME</th><th>CONTRATTO</th><th>Stato</th><th>Data inizio contratto</th><th>Data fine contratto</th><th>Matricola TS</th><th>Durata Contr.</th></tr></thead><tbody>${rows || emptyRow(10)}</tbody>`;
+  els.driversTable.querySelectorAll('[name="selectedDriver"]').forEach((input) => {
+    input.addEventListener("change", () => {
+      selectedDriverId = input.value;
+      els.editDriverBtn.disabled = false;
+      els.driversTable.querySelectorAll("[data-driver-row]").forEach((row) => row.classList.toggle("driver-selected", row.dataset.driverRow === selectedDriverId));
+    });
   });
+  els.editDriverBtn.disabled = !drivers.some((driver) => driver.id === selectedDriverId);
+}
+
+function openDriverModal(id = "") {
+  const existing = id ? driverById(id) : null;
+  if (id && (!existing || !canAccessStation(existing.station))) return;
+  editingDriverId = existing?.id || "";
+  els.driverForm.reset();
+  els.driverModalTitle.textContent = existing ? "Modifica dipendente" : "Aggiungi dipendente";
+  const stations = Array.from(new Set(["OSI2", "DSI2", "DLZ3", ...state.drivers.map((item) => item.station)])).filter(canAccessStation);
+  els.driverStation.innerHTML = stations.map((station) => `<option value="${escapeHtml(station)}">${escapeHtml(station)}</option>`).join("");
+  els.driverStation.value = existing?.station || (stations.includes(state.station) ? state.station : stations[0]);
+  els.driverId.value = existing?.id || "";
+  els.driverName.value = existing?.name || "";
+  els.driverContract.value = existing?.contract || "";
+  els.driverStatus.value = existing?.status || (existing?.active === false ? "Cessato" : "Attivo");
+  els.driverStartDate.value = existing?.startDate || "";
+  els.driverEndDate.value = existing?.endDate || "";
+  els.driverMatricola.value = existing?.matricola || "";
+  els.driverDuration.value = existing?.duration === "TD" ? "TD" : "TI";
+  els.driverModal.classList.add("active");
+}
+
+function closeDriverModal() {
+  els.driverModal.classList.remove("active");
+  editingDriverId = "";
+}
+
+function saveDriverForm(event) {
+  event.preventDefault();
+  const existing = editingDriverId ? driverById(editingDriverId) : null;
+  if (editingDriverId && !existing) return showToast("Dipendente non trovato");
+  const station = els.driverStation.value;
+  if (!canAccessStation(station) || (existing && !canAccessStation(existing.station))) return showToast("Filiale non autorizzata");
+  const id = clean(els.driverId.value);
+  const matricola = normalizeMatricola(els.driverMatricola.value);
+  const contract = clean(els.driverContract.value);
+  const startDate = els.driverStartDate.value;
+  const endDate = els.driverEndDate.value;
+  if (!id || !clean(els.driverName.value) || !matricola || !contract) return showToast("Compila tutti i campi obbligatori");
+  if (endDate && startDate && endDate < startDate) return showToast("La data di fine precede quella di inizio");
+  if (state.drivers.some((item) => item !== existing && (item.id.toLowerCase() === id.toLowerCase() || normalizeMatricola(item.matricola) === matricola))) return showToast("ID driver o matricola già presenti");
+  const status = els.driverStatus.value;
+  const next = { id, name: clean(els.driverName.value), station, contract, status,
+    active: status === "Attivo", startDate, endDate, matricola,
+    duration: els.driverDuration.value, weeklyHours: inferWeeklyHours(contract), contractDays: parseContractDays(contract) };
+  if (existing) {
+    const previous = { ...existing };
+    Object.assign(existing, next);
+    if (previous.id !== id) {
+      if (state.plan[previous.id]) {
+        state.plan[id] = state.plan[previous.id];
+        delete state.plan[previous.id];
+      }
+      state.constraints.forEach((item) => { if (item.driverId === previous.id) item.driverId = id; });
+    }
+    state.absences.forEach((item) => {
+      if (item.driverId === previous.id || (previous.matricola && normalizeMatricola(item.matricola) === normalizeMatricola(previous.matricola))) {
+        item.driverId = id;
+        item.matricola = matricola;
+      }
+    });
+    const differences = ["station", "id", "name", "contract", "status", "startDate", "endDate", "matricola", "duration"]
+      .filter((field) => String(previous[field] || "") !== String(next[field] || ""))
+      .map((field) => `${field}: ${previous[field] || "—"} → ${next[field] || "—"}`);
+    addLog("Dipendente modificato", "", next.name, previous.station, differences.join("; ") || "Nessuna variazione", next.station);
+  } else {
+    state.drivers.push(next);
+    addLog("Dipendente aggiunto", "", next.name, "", `${next.station}; ${next.contract}; ${next.duration}; ${next.matricola}`, next.station);
+  }
+  selectedDriverId = id;
+  state.drivers = sortedDrivers(state.drivers);
+  closeDriverModal();
+  saveAndRender();
+  showToast(existing ? "Dipendente modificato" : "Dipendente aggiunto");
 }
 
 function renderDriverFilterOptions() {
@@ -901,7 +1000,7 @@ function updateDriverEndDate(driverId, value) {
   const driver = driverById(driverId);
   if (!driver) return;
   driver.endDate = normalizeDate(value);
-  driver.active = isActiveEmployee("", driver.endDate);
+  driver.active = driver.status !== "Cessato";
   addLog("Data fine contratto aggiornata", "", driver.name, "", driver.endDate || "Vuota");
   saveAndRender();
 }
@@ -1310,14 +1409,21 @@ function assignedCount(plan, drivers, date) {
 }
 
 function bestCandidateForDate(plan, drivers, date, weekDatesList, pass, mode) {
-  const candidates = drivers.filter((driver) => canAssignForPass(plan, driver, date, weekDatesList, pass));
+  const candidates = drivers.filter((driver) => canAssignForPass(plan, driver, date, weekDatesList, pass, mode));
   if (!candidates.length) return null;
   return candidates.sort((a, b) => candidateScore(plan, a, date, weekDatesList, pass, mode) - candidateScore(plan, b, date, weekDatesList, pass, mode))[0];
 }
 
-function canAssignForPass(plan, driver, date, weekDatesList, pass) {
+function canAssignForPass(plan, driver, date, weekDatesList, pass, mode = "saturation") {
   if (!canAssign(plan, driver, date, weekDatesList)) return false;
   const inContractDay = driver.contractDays.includes(dayIndex(date));
+  if (mode === "contract" && pass === "outside" && driver.duration === "TD") {
+    const missingContractDay = weekDatesList.some((day) => driver.contractDays.includes(dayIndex(day)) &&
+      isDriverAvailableOnDate(driver, day) && routeNeed(day) > 0 &&
+      !SATURATION_SYMBOLS.has(getCellFromPlan(plan, driver.id, day)) &&
+      getCellFromPlan(plan, driver.id, day) !== "RL");
+    if (missingContractDay) return false;
+  }
   const metrics = weeklyMetricsFromPlan(plan, driver, weekDatesList);
   if (pass === "contractUndersaturated") return inContractDay && metrics.saturationDays < metrics.contractDays;
   if (pass === "contract") return inContractDay;
@@ -1336,7 +1442,8 @@ function candidateScore(plan, driver, date, weekDatesList, pass, mode) {
   const outsidePenalty = pass === "outside" ? 100 + metrics.outsideContract * 20 : 0;
   const sixthSeventhPenalty = metrics.workDays >= 5 ? 80 : 0;
   const bPenalty = getCellFromPlan(plan, driver.id, date) === "B" ? -8 : 0;
-  return balancePriority + overTargetPenalty + outsidePenalty + sixthSeventhPenalty + consecutive * 5 + Math.max(0, contractPosition) + bPenalty;
+  const tdContractPriority = mode === "contract" && driver.duration === "TD" && driver.contractDays.includes(day) ? -1000 : 0;
+  return balancePriority + overTargetPenalty + outsidePenalty + sixthSeventhPenalty + consecutive * 5 + Math.max(0, contractPosition) + bPenalty + tdContractPriority;
 }
 
 function weeklyMetricsFromPlan(plan, driver, dates) {
@@ -1362,7 +1469,7 @@ function rebalanceWeek(plan, drivers, weekDatesList) {
 
     for (const overDriver of overDrivers) {
       const movableDates = weekDatesList
-        .filter((date) => !state.confirmedDates.includes(date) && getCellFromPlan(plan, overDriver.id, date) === "X")
+        .filter((date) => !state.confirmedDates.includes(date) && getCellFromPlan(plan, overDriver.id, date) === "X" && !(overDriver.duration === "TD" && overDriver.contractDays.includes(dayIndex(date))))
         .sort((a, b) => Number(overDriver.contractDays.includes(dayIndex(a))) - Number(overDriver.contractDays.includes(dayIndex(b))));
 
       for (const date of movableDates) {
@@ -1438,6 +1545,7 @@ function canAssign(plan, driver, date, weekOverride) {
 }
 
 function isDriverAvailableOnDate(driver, date) {
+  if (driver.active === false) return false;
   if (driver.startDate && date < driver.startDate) return false;
   if (driver.endDate && date > driver.endDate) return false;
   return true;
@@ -1702,6 +1810,7 @@ function importDrivers(rows) {
     const status = clean(getField(row, ["stato", "active"])).toLowerCase();
     const startDate = normalizeDate(getField(row, ["data_inizio_contratto", "data_inizio", "start_date"]));
     const endDate = normalizeDate(getField(row, ["data_fine_contratto", "data_fine", "end_date"]));
+    const duration = clean(getField(row, ["durata_contr", "durata_contratto", "duration"])).toUpperCase();
     const weeklyHours = parseNumber(getField(row, ["weekly_hours", "hours", "ore"])) || inferWeeklyHours(contract);
     const driver = {
       id,
@@ -1710,9 +1819,11 @@ function importDrivers(rows) {
       contract,
       weeklyHours,
       matricola,
-      active: isActiveEmployee(status, endDate),
+      status: status && !isActiveEmployee(status, "") ? "Cessato" : "Attivo",
+      active: isActiveEmployee(status, ""),
       startDate,
       endDate,
+      duration: duration === "TD" ? "TD" : "TI",
       contractDays: parseContractDays(row.days || contract)
     };
     const existing = state.drivers.find((item) => (matricola && normalizeMatricola(item.matricola) === matricola) || normalizeName(item.name) === normalizeName(name) || item.id === id);
@@ -2024,6 +2135,7 @@ function exportTableCsv(tableId, baseName) {
   }
   const rows = Array.from(table.querySelectorAll("tr"))
     .map((row) => Array.from(row.querySelectorAll("th,td"))
+      .filter((cell, index) => tableId !== "driversTable" || index > 0)
       .filter((cell) => !cell.classList.contains("row-actions"))
       .map((cell) => clean(cell.innerText).replace(/\s+/g, " ")))
     .filter((row) => row.length);
@@ -2041,7 +2153,7 @@ function exportModelData() {
     return;
   }
   const payload = {
-    version: "driver-shift-platform-backup-v1",
+    version: "driver-shift-platform-backup-v2",
     exportedAt: new Date().toISOString(),
     data: {
       station: state.station,
@@ -2074,6 +2186,11 @@ function importModelDataFile(event) {
   reader.onload = () => {
     try {
       const payload = JSON.parse(String(reader.result || "{}"));
+      if (!["driver-shift-platform-backup-v1", "driver-shift-platform-backup-v2"].includes(payload.version) ||
+          !payload.data || !Array.isArray(payload.data.drivers) || !Array.isArray(payload.data.forecast) ||
+          !Array.isArray(payload.data.absences) || !Array.isArray(payload.data.constraints) || !Array.isArray(payload.data.log)) {
+        throw new Error("Backup non riconosciuto");
+      }
       const imported = payload.data || payload;
       const users = state.users;
       state = {
@@ -2081,6 +2198,11 @@ function importModelDataFile(event) {
         ...pickImportableState(imported),
         users
       };
+      state.drivers.forEach((driver) => {
+        driver.duration = driver.duration === "TD" ? "TD" : "TI";
+        driver.status = driver.status || (driver.active === false && !driver.endDate ? "Cessato" : "Attivo");
+        driver.active = driver.status === "Attivo";
+      });
       addLog("Import backup dati", "", "", "", file.name);
       saveAndRender();
       showToast("Dati importati correttamente");
@@ -2123,7 +2245,7 @@ function driverById(id) {
 }
 
 function driver(id, name, station, contract, weeklyHours, matricola, contractDays) {
-  return { id, name, station, contract, weeklyHours, matricola, active: true, startDate: "", endDate: "", contractDays: contractDays || parseContractDays(contract) };
+  return { id, name, station, contract, weeklyHours, matricola, active: true, status: "Attivo", duration: "TI", startDate: "", endDate: "", contractDays: contractDays || parseContractDays(contract) };
 }
 
 function contractDaysLabel(driver) {
@@ -2132,6 +2254,11 @@ function contractDaysLabel(driver) {
 
 function normalizeDriverContracts() {
   state.drivers.forEach((driver) => {
+    if (!driver.status) {
+      driver.status = driver.active === false && !driver.endDate ? "Cessato" : "Attivo";
+      driver.active = driver.status === "Attivo";
+    }
+    if (driver.duration !== "TD") driver.duration = "TI";
     const parsed = parseContractDays(driver.contract || "");
     const hasContractDayPattern = /lun|mar|mer|gio|ven|sab|dom|sabato|venerdi/i.test(driver.contract || "");
     if (parsed.length && (!Array.isArray(driver.contractDays) || !driver.contractDays.length || hasContractDayPattern)) driver.contractDays = parsed;
@@ -2313,7 +2440,7 @@ function parseCsv(text) {
   const lines = text.replace(/\r/g, "").split("\n").filter((line) => line.trim());
   if (!lines.length) return rows;
   const separator = lines[0].includes(";") ? ";" : ",";
-  const headers = splitCsvLine(lines[0], separator).map((header) => clean(header).toLowerCase());
+  const headers = splitCsvLine(lines[0], separator).map(normalizeHeader);
   lines.slice(1).forEach((line) => {
     const values = splitCsvLine(line, separator);
     const row = {};
@@ -2438,11 +2565,11 @@ function emptyRow(columns) {
   return `<tr><td colspan="${columns}">Nessun dato disponibile</td></tr>`;
 }
 
-function addLog(action, date, driver, from, to) {
+function addLog(action, date, driver, from, to, station = state.station) {
   state.log.push({
     timestamp: new Date().toLocaleString("it-IT"),
     user: currentUser ? `${currentUser.fullName} (${currentUser.username})` : "",
-    station: state.station,
+    station,
     date,
     driver,
     action,

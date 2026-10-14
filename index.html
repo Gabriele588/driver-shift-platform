@@ -6,484 +6,766 @@
     <title>Driver Shift Platform</title>
     <link rel="stylesheet" href="./styles.css" />
     <style>
-      :root {
-        --bg: #eef3f8;
-        --panel: #fff;
-        --ink: #172033;
-        --muted: #667085;
-        --line: #d8e0eb;
-        --primary: #1f5fbf;
-        --primary-dark: #143f7f;
-        --danger: #b42318;
-        --x: #cfe1ff;
-        --x-locked: #8ee6dc;
-        --r: #e7e9ee;
-        --r-locked: #b9c2d0;
-        --f: #f4b183;
-        --m: #ffd2d2;
-        --b: #ead7ff;
-        --g: #fff7c2;
-        --a: #5b6472;
-        --n: #9b2242;
-      }
+:root {
+  --bg: #f5f7fb;
+  --panel: #ffffff;
+  --ink: #172033;
+  --muted: #667085;
+  --line: #d9e0ea;
+  --primary: #1f5fbf;
+  --primary-dark: #16498f;
+  --danger: #b42318;
+  --x: #cfe1ff;
+  --x-locked: #8ee6dc;
+  --r: #e7e9ee;
+  --r-locked: #b9c2d0;
+  --f: #f4b183;
+  --m: #ffd2d2;
+  --b: #ead7ff;
+  --g: #fff7c2;
+  --a: #5b6472;
+  --n: #9b2242;
+}
 
-      * { box-sizing: border-box; }
-      [hidden] { display: none !important; }
-      body {
-        margin: 0;
-        background: linear-gradient(180deg, #eaf1fb 0, #f6f8fb 320px);
-        color: var(--ink);
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
-      button, input, select { font: inherit; }
-      button {
-        border: 0;
-        border-radius: 8px;
-        background: var(--primary);
-        color: #fff;
-        cursor: pointer;
-        font-weight: 800;
-        min-height: 40px;
-        padding: 10px 14px;
-      }
-      button:hover { background: var(--primary-dark); }
-      button.ghost { background: #e8eef8; color: var(--primary-dark); }
-      button.danger { background: #fee4e2; color: var(--danger); }
-      button.active { background: var(--primary); color: #fff; }
-      .app-shell { min-height: 100vh; }
-      .app-header {
-        align-items: center;
-        background: #0f172a;
-        color: #fff;
-        display: flex;
-        justify-content: space-between;
-        gap: 20px;
-        padding: 20px 28px;
-      }
-      .brand-row { display: flex; align-items: center; gap: 14px; }
-      .brand-logo {
-        height: 54px;
-        object-fit: contain;
-        width: 220px;
-      }
-      .app-header h1 { font-size: 25px; line-height: 1.15; margin: 2px 0 0; }
-      .eyebrow {
-        color: #a9b9d6;
-        font-size: 12px;
-        font-weight: 900;
-        letter-spacing: .08em;
-        margin: 0;
-        text-transform: uppercase;
-      }
-      .header-actions, .toolbar-buttons, .panel-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-      .user-chip {
-        align-items: center;
-        background: rgba(255,255,255,.12);
-        border: 1px solid rgba(255,255,255,.18);
-        border-radius: 999px;
-        color: #e8eef8;
-        display: inline-flex;
-        font-size: 12px;
-        font-weight: 900;
-        min-height: 40px;
-        padding: 8px 12px;
-      }
-      .app-status {
-        align-items: center;
-        background: rgba(255,255,255,.12);
-        border: 1px solid rgba(255,255,255,.18);
-        border-radius: 999px;
-        color: #c7d7f2;
-        display: inline-flex;
-        font-size: 12px;
-        font-weight: 900;
-        margin-top: 8px;
-        padding: 5px 10px;
-      }
-      .app-status.ready {
-        background: rgba(117, 195, 119, .16);
-        color: #baf0c0;
-      }
-      main { padding: 22px; }
-      .hero {
-        align-items: stretch;
-        display: grid;
-        gap: 16px;
-        grid-template-columns: minmax(280px, 1.4fr) minmax(260px, .8fr);
-        margin-bottom: 16px;
-      }
-      .hero-card, .next-actions {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 18px;
-      }
-      .hero-card h2 { font-size: 22px; margin: 0 0 6px; }
-      .hero-card p, .next-actions p { color: var(--muted); margin: 0; }
-      .action-list { display: grid; gap: 10px; margin-top: 14px; }
-      .action-list button { justify-content: flex-start; text-align: left; width: 100%; }
-      .toolbar {
-        align-items: end;
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        display: grid;
-        gap: 14px;
-        grid-template-columns: repeat(4, minmax(150px, 1fr)) auto;
-        padding: 16px;
-      }
-      label { color: var(--muted); display: grid; gap: 6px; font-size: 13px; font-weight: 800; }
-      input, select {
-        background: #fff;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        color: var(--ink);
-        min-height: 40px;
-        padding: 8px 10px;
-      }
-      .kpi-grid { display: grid; gap: 12px; grid-template-columns: repeat(6, 1fr); margin-top: 14px; }
-      .kpi-grid article {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 14px;
-      }
-      .kpi-grid span { color: var(--muted); display: block; font-size: 12px; font-weight: 900; text-transform: uppercase; }
-      .kpi-grid strong { display: block; font-size: 26px; margin-top: 4px; }
-      .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 12px; }
-      .tabs button { background: #dde6f3; color: #23324d; }
-      .tabs button.active { background: var(--primary); color: #fff; }
-      .tab-panel {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        display: none;
-        padding: 16px;
-      }
-      .tab-panel.active { display: block; }
-      .home-grid {
-        align-items: stretch;
-        display: grid;
-        gap: 16px;
-        grid-template-columns: minmax(360px, .95fr) minmax(520px, 1.05fr);
-      }
-      .home-hero {
-        border-radius: 8px;
-        display: block;
-        height: 100%;
-        max-height: 390px;
-        min-height: 300px;
-        object-fit: cover;
-        object-position: center;
-        width: 100%;
-      }
-      .home-visual-grid {
-        display: grid;
-        gap: 16px;
-        grid-template-columns: minmax(320px, .9fr) minmax(420px, 1.1fr);
-      }
-      .home-visual-card {
-        background: #f8fbff;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 16px;
-      }
-      .home-visual-card h2 { font-size: 19px; margin: 0 0 12px; }
-      .home-backup-card { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 14px; }
-      .home-backup-card p { color: var(--muted); margin: 0 0 12px; }
-      .import-data-button {
-        align-items: center;
-        background: #e8eef8;
-        border-radius: 8px;
-        color: var(--primary-dark);
-        cursor: pointer;
-        display: inline-flex;
-        font-size: 14px;
-        font-weight: 900;
-        min-height: 40px;
-        padding: 10px 14px;
-      }
-      .import-data-button input { display: none; }
-      .tool-flow { display: block; height: auto; width: 100%; }
-      .flow-label { fill: #172033; font-size: 16px; font-weight: 900; }
-      .flow-step { fill: #e8eef8; stroke: #b9c8df; stroke-width: 2; }
-      .flow-step-primary { fill: #1f5fbf; stroke: #1f5fbf; }
-      .flow-step-primary + .flow-label { fill: #fff; }
-      .flow-arrow {
-        fill: none;
-        marker-end: url(#flowArrow);
-        stroke: #1f5fbf;
-        stroke-linecap: round;
-        stroke-width: 3;
-      }
-      .panel-head { align-items: start; display: flex; gap: 16px; justify-content: space-between; margin-bottom: 14px; }
-      .panel-head h2, .import-box h2, .next-actions h2 { font-size: 19px; margin: 0 0 4px; }
-      .panel-head p, .import-box p { color: var(--muted); margin: 0; }
-      .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-      .legend span {
-        align-items: center;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        display: inline-flex;
-        font-size: 12px;
-        font-weight: 900;
-        gap: 6px;
-        padding: 5px 9px;
-      }
-      .legend i { border-radius: 4px; display: inline-block; height: 14px; width: 18px; }
-      .table-wrap { border: 1px solid var(--line); border-radius: 8px; max-height: 68vh; overflow: auto; }
-      .table-wrap.compact { max-height: 48vh; }
-      table { border-collapse: separate; border-spacing: 0; min-width: 100%; width: max-content; }
-      th, td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); font-size: 13px; padding: 8px; text-align: center; white-space: nowrap; }
-      th { background: #edf2f8; position: sticky; top: 0; z-index: 2; }
-      th.weekly-index {
-        background: #173a63;
-        color: #fff;
-        font-size: 11px;
-        line-height: 1.15;
-        max-width: 76px;
-        min-width: 64px;
-        padding: 6px 5px;
-        white-space: normal;
-        width: 70px;
-      }
-      th:first-child, td:first-child { left: 0; position: sticky; text-align: left; z-index: 1; }
-      th:first-child { z-index: 3; }
-      td:first-child { background: #fff; min-width: 240px; }
-      .calendar-cell { cursor: pointer; font-weight: 900; min-width: 48px; }
-      .symbol-X { background: var(--x); }
-      .symbol-XL { background: var(--x-locked); }
-      .symbol-R { background: var(--r); }
-      .symbol-RL { background: var(--r-locked); }
-      .symbol-F { background: var(--f); color: #5a2f00; }
-      .symbol-M { background: var(--m); }
-      .symbol-B { background: var(--b); }
-      .symbol-G { background: var(--g); }
-      .symbol-A { background: var(--a); color: #fff; }
-      .symbol-N { background: var(--n); color: #fff; }
-      .confirmed { outline: 3px solid #75c377; outline-offset: -3px; }
-      .calendar-cell.confirmed.symbol-X,
-      .calendar-cell.confirmed.symbol-XL {
-        background: #93c47d;
-        color: #102a12;
-      }
-      .weekly-index-cell {
-        background: #bfe4f2;
-        font-size: 12px;
-        font-variant-numeric: tabular-nums;
-        max-width: 76px;
-        min-width: 64px;
-        padding: 6px 6px;
-        text-align: right;
-        width: 70px;
-      }
-      .weekly-delta-ok {
-        background: #e2f0d9;
-        color: #238000;
-        font-size: 12px;
-        font-weight: 900;
-        max-width: 76px;
-        min-width: 64px;
-        padding: 6px 6px;
-        text-align: right;
-        width: 70px;
-      }
-      .weekly-delta-high,
-      .weekly-saturation-high {
-        background: #fce4d6;
-        color: #d00000;
-        font-size: 12px;
-        font-weight: 900;
-        max-width: 76px;
-        min-width: 64px;
-        padding: 6px 6px;
-        text-align: right;
-        width: 70px;
-      }
-      .weekly-saturation-six {
-        background: #d9c2ff;
-        color: #4b0082;
-        font-size: 12px;
-        font-weight: 900;
-        max-width: 76px;
-        min-width: 64px;
-        padding: 6px 6px;
-        text-align: right;
-        width: 70px;
-      }
-      .table-date-input { min-height: 34px; min-width: 132px; padding: 6px 8px; }
-      .weekly-delta-low,
-      .weekly-saturation-low {
-        background: #fff2cc;
-        color: #9a6700;
-        font-size: 12px;
-        font-weight: 900;
-        max-width: 76px;
-        min-width: 64px;
-        padding: 6px 6px;
-        text-align: right;
-        width: 70px;
-      }
-      .weekly-saturation-ok {
-        background: #e2f0d9;
-        color: #238000;
-        font-size: 12px;
-        font-weight: 900;
-        max-width: 76px;
-        min-width: 64px;
-        padding: 6px 6px;
-        text-align: right;
-        width: 70px;
-      }
-      .daily-total-x {
-        font-weight: 900;
-      }
-      .daily-delta-ok,
-      .daily-delta-low,
-      .daily-delta-high {
-        font-weight: 900;
-        font-variant-numeric: tabular-nums;
-      }
-      .daily-delta-ok {
-        background: #e2f0d9;
-        color: #238000;
-      }
-      .daily-delta-low {
-        background: #fce4d6;
-        color: #d00000;
-      }
-      .daily-delta-high {
-        background: #fff2cc;
-        color: #9a6700;
-      }
-      #dashboardTable th, #dashboardTable td { font-size: 12px; min-width: 112px; white-space: normal; }
-      #dashboardTable th:first-child, #dashboardTable td:first-child { min-width: 118px; }
-      .dashboard-week-confirmed { background: #93c47d !important; color: #102a12; font-weight: 900; }
-      .dashboard-total-label, .dashboard-total-row td { font-weight: 900; }
-      .dashboard-total-row td { background: #eef4ff; }
-      .dashboard-kpi-ok { background: #e2f0d9; color: #238000; font-weight: 900; }
-      .dashboard-kpi-warn { background: #fff2cc; color: #9a6700; font-weight: 900; }
-      .dashboard-kpi-bad { background: #fce4d6; color: #d00000; font-weight: 900; }
-      .import-grid { display: grid; gap: 14px; grid-template-columns: repeat(3, 1fr); }
-      .import-box { border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
-      .import-box code { background: #eef2f7; border-radius: 4px; padding: 2px 4px; }
-      .constraint-form { align-items: end; display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(150px, 1fr)) auto; margin-bottom: 14px; }
-      .row-actions { display: flex; gap: 8px; justify-content: center; }
-      .row-actions button { padding: 7px 10px; }
-      .toast {
-        background: #101828;
-        border-radius: 8px;
-        bottom: 20px;
-        color: #fff;
-        display: none;
-        font-weight: 800;
-        left: 50%;
-        line-height: 1.35;
-        max-width: min(760px, calc(100vw - 32px));
-        padding: 12px 16px;
-        position: fixed;
-        transform: translateX(-50%);
-        white-space: normal;
-        z-index: 20;
-      }
-      .toast.show { display: block; }
-      .login-backdrop {
-        align-items: center;
-        background: linear-gradient(135deg, #0f172a 0%, #173a63 100%);
-        display: flex;
-        inset: 0;
-        justify-content: center;
-        padding: 22px;
-        position: fixed;
-        z-index: 40;
-      }
-      .login-brand-fixed {
-        height: 64px;
-        left: 24px;
-        object-fit: contain;
-        position: fixed;
-        top: 24px;
-        width: 250px;
-      }
-      .login-card {
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 24px 80px rgba(0,0,0,.28);
-        display: grid;
-        gap: 16px;
-        max-width: 420px;
-        padding: 24px;
-        width: 100%;
-      }
-      .login-card h1 { font-size: 24px; margin: 0; }
-      .login-card p { color: var(--muted); margin: 0; }
-      .login-error { color: var(--danger); font-size: 13px; font-weight: 800; min-height: 18px; }
-      .app-shell.auth-locked { display: none; }
-      .modal-backdrop {
-        align-items: center;
-        background: rgba(15, 23, 42, .52);
-        display: none;
-        inset: 0;
-        justify-content: center;
-        padding: 18px;
-        position: fixed;
-        z-index: 30;
-      }
-      .modal-backdrop.active { display: flex; }
-      .modal {
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 24px 80px rgba(15, 23, 42, .25);
-        max-height: min(720px, calc(100vh - 36px));
-        max-width: 720px;
-        overflow: auto;
-        padding: 18px;
-        width: min(720px, 100%);
-      }
-      .modal h2 { margin: 0 0 6px; }
-      .modal p { color: var(--muted); margin: 0 0 14px; }
-      .modal-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        justify-content: flex-end;
-        margin-top: 14px;
-      }
-      .check-list {
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        display: grid;
-        gap: 0;
-        max-height: 360px;
-        overflow: auto;
-      }
-      .check-list label {
-        align-items: center;
-        border-bottom: 1px solid var(--line);
-        color: var(--ink);
-        display: flex;
-        font-size: 13px;
-        font-weight: 700;
-        gap: 10px;
-        padding: 9px 10px;
-      }
-      .check-list label:last-child { border-bottom: 0; }
-      .check-list input { min-height: auto; }
-      .date-compact {
-        max-width: 92px;
-        min-width: 82px;
-        width: 88px;
-      }
-      @media (max-width: 1100px) {
-        .hero, .toolbar, .kpi-grid, .import-grid, .constraint-form { grid-template-columns: repeat(2, 1fr); }
-        .home-grid, .home-visual-grid { grid-template-columns: 1fr; }
-        .app-header, .panel-head { align-items: stretch; flex-direction: column; }
-      }
-      @media (max-width: 680px) {
-        main { padding: 14px; }
-        .hero, .toolbar, .kpi-grid, .import-grid, .constraint-form { grid-template-columns: 1fr; }
-        .app-header { padding: 18px; }
-      }
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 10px 14px;
+}
+
+button:hover {
+  background: var(--primary-dark);
+}
+
+button.ghost {
+  background: #e8eef8;
+  color: var(--primary-dark);
+}
+
+button.danger {
+  background: #fee4e2;
+  color: var(--danger);
+}
+
+button.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.app-header {
+  align-items: center;
+  background: #0f172a;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 28px;
+}
+
+.app-header h1 {
+  font-size: 26px;
+  line-height: 1.15;
+  margin: 2px 0 0;
+}
+
+.eyebrow {
+  color: #a9b9d6;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.header-actions,
+.toolbar-buttons,
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+main {
+  padding: 22px;
+}
+
+.toolbar {
+  align-items: end;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(150px, 1fr)) auto;
+  padding: 16px;
+}
+
+label {
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+input,
+select {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  min-height: 40px;
+  padding: 8px 10px;
+}
+
+.kpi-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(6, 1fr);
+  margin-top: 14px;
+}
+
+.kpi-grid article {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.kpi-grid span {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.kpi-grid strong {
+  display: block;
+  font-size: 26px;
+  margin-top: 4px;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0 12px;
+}
+
+.tabs button {
+  background: #dde6f3;
+  color: #23324d;
+}
+
+.tabs button.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.tab-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: none;
+  padding: 16px;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+.home-grid {
+  display: grid;
+  align-items: stretch;
+  gap: 16px;
+  grid-template-columns: minmax(360px, .95fr) minmax(520px, 1.05fr);
+}
+
+.home-hero {
+  border-radius: 8px;
+  display: block;
+  height: 100%;
+  max-height: 390px;
+  min-height: 300px;
+  object-fit: cover;
+  object-position: center;
+  width: 100%;
+}
+
+.home-visual-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(320px, .9fr) minmax(420px, 1.1fr);
+}
+
+.home-visual-card {
+  background: #f8fbff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.home-visual-card h2 {
+  font-size: 19px;
+  margin: 0 0 12px;
+}
+
+.home-backup-card {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.home-backup-card p {
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+
+.import-data-button {
+  align-items: center;
+  background: #e8eef8;
+  border-radius: 8px;
+  color: var(--primary-dark);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 800;
+  min-height: 40px;
+  padding: 10px 14px;
+}
+
+.import-data-button input {
+  display: none;
+}
+
+.tool-flow {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.flow-label {
+  fill: #172033;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.flow-step {
+  fill: #e8eef8;
+  stroke: #b9c8df;
+  stroke-width: 2;
+}
+
+.flow-step-primary {
+  fill: #1f5fbf;
+  stroke: #1f5fbf;
+}
+
+.flow-step-primary + .flow-label {
+  fill: #fff;
+}
+
+.flow-arrow {
+  fill: none;
+  marker-end: url(#flowArrow);
+  stroke: #1f5fbf;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.panel-head {
+  align-items: start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.panel-head h2,
+.import-box h2 {
+  font-size: 19px;
+  margin: 0 0 4px;
+}
+
+.panel-head p,
+.import-box p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.legend span {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 6px;
+  padding: 5px 9px;
+}
+
+.legend i {
+  border-radius: 4px;
+  display: inline-block;
+  height: 14px;
+  width: 18px;
+}
+
+.table-wrap {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  max-height: 68vh;
+  overflow: auto;
+}
+
+.table-wrap.compact {
+  max-height: 48vh;
+}
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 100%;
+  width: max-content;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  font-size: 13px;
+  padding: 8px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+th {
+  background: #edf2f8;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+th.weekly-index {
+  background: #173a63;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.15;
+  max-width: 76px;
+  min-width: 64px;
+  padding: 6px 5px;
+  white-space: normal;
+  width: 70px;
+}
+
+th:first-child,
+td:first-child {
+  left: 0;
+  position: sticky;
+  text-align: left;
+  z-index: 1;
+}
+
+th:first-child {
+  z-index: 3;
+}
+
+td:first-child {
+  background: #fff;
+  min-width: 240px;
+}
+
+.calendar-cell {
+  cursor: pointer;
+  font-weight: 900;
+  min-width: 48px;
+}
+
+.symbol-X { background: var(--x); }
+.symbol-XL { background: var(--x-locked); }
+.symbol-R { background: var(--r); }
+.symbol-RL { background: var(--r-locked); }
+.symbol-F { background: var(--f); color: #5a2f00; }
+.symbol-M { background: var(--m); }
+.symbol-B { background: var(--b); }
+.symbol-G { background: var(--g); }
+.symbol-A { background: var(--a); color: #fff; }
+.symbol-N { background: var(--n); color: #fff; }
+
+.confirmed {
+  outline: 3px solid #75c377;
+  outline-offset: -3px;
+}
+
+.calendar-cell.confirmed.symbol-X,
+.calendar-cell.confirmed.symbol-XL {
+  background: #93c47d;
+  color: #102a12;
+}
+
+.weekly-index-cell {
+  background: #bfe4f2;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  max-width: 76px;
+  min-width: 64px;
+  padding: 6px 6px;
+  text-align: right;
+  width: 70px;
+}
+
+.weekly-delta-ok {
+  background: #e2f0d9;
+  color: #238000;
+  font-size: 12px;
+  font-weight: 900;
+  max-width: 76px;
+  min-width: 64px;
+  padding: 6px 6px;
+  text-align: right;
+  width: 70px;
+}
+
+.weekly-delta-high,
+.weekly-saturation-high {
+  background: #fce4d6;
+  color: #d00000;
+  font-size: 12px;
+  font-weight: 900;
+  max-width: 76px;
+  min-width: 64px;
+  padding: 6px 6px;
+  text-align: right;
+  width: 70px;
+}
+
+.weekly-saturation-six {
+  background: #d9c2ff;
+  color: #4b0082;
+  font-size: 12px;
+  font-weight: 900;
+  max-width: 76px;
+  min-width: 64px;
+  padding: 6px 6px;
+  text-align: right;
+  width: 70px;
+}
+
+.table-date-input {
+  min-height: 34px;
+  min-width: 132px;
+  padding: 6px 8px;
+}
+
+.weekly-delta-low,
+.weekly-saturation-low {
+  background: #fff2cc;
+  color: #9a6700;
+  font-size: 12px;
+  font-weight: 900;
+  max-width: 76px;
+  min-width: 64px;
+  padding: 6px 6px;
+  text-align: right;
+  width: 70px;
+}
+
+.weekly-saturation-ok {
+  background: #e2f0d9;
+  color: #238000;
+  font-size: 12px;
+  font-weight: 900;
+  max-width: 76px;
+  min-width: 64px;
+  padding: 6px 6px;
+  text-align: right;
+  width: 70px;
+}
+
+.daily-total-x {
+  font-weight: 900;
+}
+
+.daily-delta-ok,
+.daily-delta-low,
+.daily-delta-high {
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.daily-delta-ok {
+  background: #e2f0d9;
+  color: #238000;
+}
+
+.daily-delta-low {
+  background: #fce4d6;
+  color: #d00000;
+}
+
+.daily-delta-high {
+  background: #fff2cc;
+  color: #9a6700;
+}
+
+#dashboardTable th,
+#dashboardTable td {
+  font-size: 12px;
+  min-width: 112px;
+  white-space: normal;
+}
+
+#dashboardTable th:first-child,
+#dashboardTable td:first-child {
+  min-width: 118px;
+}
+
+.dashboard-week-confirmed {
+  background: #93c47d !important;
+  color: #102a12;
+  font-weight: 900;
+}
+
+.dashboard-total-label,
+.dashboard-total-row td {
+  font-weight: 900;
+}
+
+.dashboard-total-row td {
+  background: #eef4ff;
+}
+
+.dashboard-kpi-ok {
+  background: #e2f0d9;
+  color: #238000;
+  font-weight: 900;
+}
+
+.dashboard-kpi-warn {
+  background: #fff2cc;
+  color: #9a6700;
+  font-weight: 900;
+}
+
+.dashboard-kpi-bad {
+  background: #fce4d6;
+  color: #d00000;
+  font-weight: 900;
+}
+
+.import-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.import-box {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.import-box code {
+  background: #eef2f7;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+.constraint-form {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
+  margin-bottom: 14px;
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.row-actions button {
+  padding: 7px 10px;
+}
+
+.toast {
+  background: #101828;
+  border-radius: 8px;
+  bottom: 20px;
+  color: #fff;
+  display: none;
+  font-weight: 700;
+  left: 50%;
+  line-height: 1.35;
+  max-width: min(760px, calc(100vw - 32px));
+  padding: 12px 16px;
+  position: fixed;
+  transform: translateX(-50%);
+  white-space: normal;
+  z-index: 20;
+}
+
+.toast.show {
+  display: block;
+}
+
+.modal-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, .52);
+  display: none;
+  inset: 0;
+  justify-content: center;
+  padding: 18px;
+  position: fixed;
+  z-index: 30;
+}
+
+.modal-backdrop.active {
+  display: flex;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, .25);
+  max-height: min(720px, calc(100vh - 36px));
+  max-width: 720px;
+  overflow: auto;
+  padding: 18px;
+  width: min(720px, 100%);
+}
+
+.modal h2 {
+  margin: 0 0 6px;
+}
+
+.modal p {
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.driver-modal { max-width: 850px; width: min(850px, 100%); }
+.driver-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.driver-form-grid label { display: flex; flex-direction: column; gap: 5px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.driver-form-grid input, .driver-form-grid select { width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: #fff; }
+#driversTable [data-driver-row] { cursor: pointer; }
+#driversTable .driver-selected { background: #e8f1ff; }
+button:disabled { cursor: not-allowed; opacity: .5; }
+@media (max-width: 680px) { .driver-form-grid { grid-template-columns: 1fr; } }
+
+.check-list {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 0;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.check-list label {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  display: flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 10px;
+  padding: 9px 10px;
+}
+
+.check-list label:last-child {
+  border-bottom: 0;
+}
+
+.check-list input {
+  min-height: auto;
+}
+
+.date-compact {
+  max-width: 92px;
+  min-width: 82px;
+  width: 88px;
+}
+
+@media (max-width: 1100px) {
+  .toolbar,
+  .kpi-grid,
+  .import-grid,
+  .constraint-form {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .home-grid,
+  .home-visual-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-header,
+  .panel-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 680px) {
+  main {
+    padding: 14px;
+  }
+
+  .toolbar,
+  .kpi-grid,
+  .import-grid,
+  .constraint-form {
+    grid-template-columns: 1fr;
+  }
+
+  .app-header {
+    padding: 18px;
+  }
+}
+
     </style>
   </head>
   <body>
@@ -672,7 +954,7 @@
           </article>
           <article class="import-box">
             <h2>Dipendenti</h2>
-            <p>Import diretto della lista con colonne <code>Station</code>, <code>ID DRIVER</code>, <code>NOME E COGNOME</code>, <code>CONTRATTO</code>, <code>Stato</code>, <code>Matricola TS</code>.</p>
+            <p>Import diretto della lista a 9 colonne: Station, ID DRIVER, NOME E COGNOME, CONTRATTO, Stato, Data inizio contratto, Data fine contratto, Matricola TS, Durata Contr. (TD/TI).</p>
             <input id="driversFile" type="file" accept=".xlsx,.xls,.csv,text/csv" />
           </article>
           <article class="import-box">
@@ -764,9 +1046,11 @@
         <div class="panel-head">
           <div>
             <h2>Dipendenti</h2>
-            <p>Organico importato, filtrabile per station e ore contrattuali.</p>
+            <p>Anagrafica dipendenti, filtrabile per filiale, ore e nominativo.</p>
           </div>
           <div class="panel-actions">
+            <button id="addDriverBtn" type="button">Aggiungi dipendente</button>
+            <button id="editDriverBtn" class="ghost" type="button" disabled>Modifica dipendente</button>
             <label>
               Filtra station
               <select id="driverFilterStation"></select>
@@ -786,6 +1070,26 @@
           <table id="driversTable"></table>
         </div>
       </section>
+
+      <div class="modal-backdrop" id="driverModal" role="dialog" aria-modal="true" aria-labelledby="driverModalTitle">
+        <div class="modal driver-modal">
+          <h2 id="driverModalTitle">Dipendente</h2>
+          <form id="driverForm">
+            <div class="driver-form-grid">
+              <label>Station <select id="driverStation" required></select></label>
+              <label>ID DRIVER <input id="driverId" required maxlength="80" /></label>
+              <label>NOME E COGNOME <input id="driverName" required maxlength="150" /></label>
+              <label>CONTRATTO <input id="driverContract" required placeholder="LUN-MAR-MER_24h" /></label>
+              <label>Stato <select id="driverStatus"><option value="Attivo">Attivo</option><option value="Cessato">Cessato</option></select></label>
+              <label>Data inizio contratto <input id="driverStartDate" type="date" /></label>
+              <label>Data fine contratto <input id="driverEndDate" type="date" /></label>
+              <label>Matricola TS <input id="driverMatricola" required maxlength="40" /></label>
+              <label>Durata Contr. <select id="driverDuration" required><option value="TI">TI - Tempo indeterminato</option><option value="TD">TD - Tempo determinato</option></select></label>
+            </div>
+            <div class="modal-actions"><button id="cancelDriverBtn" class="ghost" type="button">Annulla</button><button type="submit">Salva</button></div>
+          </form>
+        </div>
+      </div>
 
       <section class="tab-panel" id="actualsPanel">
         <div class="panel-head">
@@ -963,6 +1267,8 @@ let remoteDirty = false;
 let remoteSaveOptions = { syncUsers: false };
 let lastUserInteractionAt = 0;
 let lastLocalMutationAt = 0;
+let selectedDriverId = "";
+let editingDriverId = "";
 
 const els = {
   appShell: document.querySelector("#appShell"),
@@ -991,6 +1297,20 @@ const els = {
   driverFilterStation: document.querySelector("#driverFilterStation"),
   driverFilterHours: document.querySelector("#driverFilterHours"),
   driverFilterName: document.querySelector("#driverFilterName"),
+  addDriverBtn: document.querySelector("#addDriverBtn"),
+  editDriverBtn: document.querySelector("#editDriverBtn"),
+  driverModal: document.querySelector("#driverModal"),
+  driverModalTitle: document.querySelector("#driverModalTitle"),
+  driverForm: document.querySelector("#driverForm"),
+  driverStation: document.querySelector("#driverStation"),
+  driverId: document.querySelector("#driverId"),
+  driverName: document.querySelector("#driverName"),
+  driverContract: document.querySelector("#driverContract"),
+  driverStatus: document.querySelector("#driverStatus"),
+  driverStartDate: document.querySelector("#driverStartDate"),
+  driverEndDate: document.querySelector("#driverEndDate"),
+  driverMatricola: document.querySelector("#driverMatricola"),
+  driverDuration: document.querySelector("#driverDuration"),
   constraintsTable: document.querySelector("#constraintsTable"),
   actualRoutesTable: document.querySelector("#actualRoutesTable"),
   driversTable: document.querySelector("#driversTable"),
@@ -1447,6 +1767,10 @@ function bindEvents() {
   els.driverFilterStation?.addEventListener("change", () => renderDrivers());
   els.driverFilterHours?.addEventListener("change", () => renderDrivers());
   els.driverFilterName?.addEventListener("input", () => renderDrivers());
+  els.addDriverBtn?.addEventListener("click", () => openDriverModal());
+  els.editDriverBtn?.addEventListener("click", () => openDriverModal(selectedDriverId));
+  document.querySelector("#cancelDriverBtn")?.addEventListener("click", closeDriverModal);
+  els.driverForm?.addEventListener("submit", saveDriverForm);
   document.querySelectorAll("[data-export-table]").forEach((button) => {
     button.addEventListener("click", () => exportTableCsv(button.dataset.exportTable, button.dataset.exportName || button.dataset.exportTable));
   });
@@ -1792,28 +2116,107 @@ function renderDrivers() {
   const hours = els.driverFilterHours?.value || "Tutte";
   const nameFilter = normalizeName(els.driverFilterName?.value || "");
   const drivers = sortedDrivers(state.drivers.filter((driver) => {
-    if (driver.active === false) return false;
     if (!canAccessStation(driver.station)) return false;
     if (station !== "Tutte" && driver.station !== station) return false;
     if (hours !== "Tutte" && String(driver.weeklyHours) !== hours) return false;
     if (nameFilter && !normalizeName(driver.name).includes(nameFilter)) return false;
     return true;
   }));
-  const rows = drivers.map((driver) => `<tr>
+  const rows = drivers.map((driver) => `<tr data-driver-row="${escapeHtml(driver.id)}" class="${selectedDriverId === driver.id ? "driver-selected" : ""}">
+    <td><input type="radio" name="selectedDriver" value="${escapeHtml(driver.id)}" aria-label="Seleziona ${escapeHtml(driver.name)}" ${selectedDriverId === driver.id ? "checked" : ""}></td>
+    <td>${escapeHtml(driver.station)}</td>
     <td>${escapeHtml(driver.id)}</td>
     <td>${escapeHtml(driver.name)}</td>
-    <td>${escapeHtml(driver.station)}</td>
-    <td>${escapeHtml(driver.matricola || "")}</td>
     <td>${escapeHtml(driver.contract)}</td>
-    <td>${driver.startDate ? formatShortDate(driver.startDate) : ""}</td>
-    <td><input class="table-date-input" data-driver-end-date="${escapeHtml(driver.id)}" type="date" value="${escapeHtml(driver.endDate || "")}" /></td>
-    <td>${driver.weeklyHours}</td>
-    <td>${escapeHtml(contractDaysLabel(driver))}</td>
+    <td>${escapeHtml(driver.status || (driver.active === false ? "Cessato" : "Attivo"))}</td>
+    <td>${escapeHtml(driver.startDate || "")}</td>
+    <td>${escapeHtml(driver.endDate || "")}</td>
+    <td>${escapeHtml(driver.matricola || "")}</td>
+    <td>${escapeHtml(driver.duration || "TI")}</td>
   </tr>`).join("");
-  els.driversTable.innerHTML = `<thead><tr><th>ID</th><th>Nome</th><th>Station</th><th>Matricola</th><th>Contratto</th><th>Data inizio</th><th>Data fine</th><th>Ore</th><th>Giorni</th></tr></thead><tbody>${rows || emptyRow(9)}</tbody>`;
-  els.driversTable.querySelectorAll("[data-driver-end-date]").forEach((input) => {
-    input.addEventListener("change", () => updateDriverEndDate(input.dataset.driverEndDate, input.value));
+  els.driversTable.innerHTML = `<thead><tr><th>Seleziona</th><th>Station</th><th>ID DRIVER</th><th>NOME E COGNOME</th><th>CONTRATTO</th><th>Stato</th><th>Data inizio contratto</th><th>Data fine contratto</th><th>Matricola TS</th><th>Durata Contr.</th></tr></thead><tbody>${rows || emptyRow(10)}</tbody>`;
+  els.driversTable.querySelectorAll('[name="selectedDriver"]').forEach((input) => {
+    input.addEventListener("change", () => {
+      selectedDriverId = input.value;
+      els.editDriverBtn.disabled = false;
+      els.driversTable.querySelectorAll("[data-driver-row]").forEach((row) => row.classList.toggle("driver-selected", row.dataset.driverRow === selectedDriverId));
+    });
   });
+  els.editDriverBtn.disabled = !drivers.some((driver) => driver.id === selectedDriverId);
+}
+
+function openDriverModal(id = "") {
+  const existing = id ? driverById(id) : null;
+  if (id && (!existing || !canAccessStation(existing.station))) return;
+  editingDriverId = existing?.id || "";
+  els.driverForm.reset();
+  els.driverModalTitle.textContent = existing ? "Modifica dipendente" : "Aggiungi dipendente";
+  const stations = Array.from(new Set(["OSI2", "DSI2", "DLZ3", ...state.drivers.map((item) => item.station)])).filter(canAccessStation);
+  els.driverStation.innerHTML = stations.map((station) => `<option value="${escapeHtml(station)}">${escapeHtml(station)}</option>`).join("");
+  els.driverStation.value = existing?.station || (stations.includes(state.station) ? state.station : stations[0]);
+  els.driverId.value = existing?.id || "";
+  els.driverName.value = existing?.name || "";
+  els.driverContract.value = existing?.contract || "";
+  els.driverStatus.value = existing?.status || (existing?.active === false ? "Cessato" : "Attivo");
+  els.driverStartDate.value = existing?.startDate || "";
+  els.driverEndDate.value = existing?.endDate || "";
+  els.driverMatricola.value = existing?.matricola || "";
+  els.driverDuration.value = existing?.duration === "TD" ? "TD" : "TI";
+  els.driverModal.classList.add("active");
+}
+
+function closeDriverModal() {
+  els.driverModal.classList.remove("active");
+  editingDriverId = "";
+}
+
+function saveDriverForm(event) {
+  event.preventDefault();
+  const existing = editingDriverId ? driverById(editingDriverId) : null;
+  if (editingDriverId && !existing) return showToast("Dipendente non trovato");
+  const station = els.driverStation.value;
+  if (!canAccessStation(station) || (existing && !canAccessStation(existing.station))) return showToast("Filiale non autorizzata");
+  const id = clean(els.driverId.value);
+  const matricola = normalizeMatricola(els.driverMatricola.value);
+  const contract = clean(els.driverContract.value);
+  const startDate = els.driverStartDate.value;
+  const endDate = els.driverEndDate.value;
+  if (!id || !clean(els.driverName.value) || !matricola || !contract) return showToast("Compila tutti i campi obbligatori");
+  if (endDate && startDate && endDate < startDate) return showToast("La data di fine precede quella di inizio");
+  if (state.drivers.some((item) => item !== existing && (item.id.toLowerCase() === id.toLowerCase() || normalizeMatricola(item.matricola) === matricola))) return showToast("ID driver o matricola già presenti");
+  const status = els.driverStatus.value;
+  const next = { id, name: clean(els.driverName.value), station, contract, status,
+    active: status === "Attivo", startDate, endDate, matricola,
+    duration: els.driverDuration.value, weeklyHours: inferWeeklyHours(contract), contractDays: parseContractDays(contract) };
+  if (existing) {
+    const previous = { ...existing };
+    Object.assign(existing, next);
+    if (previous.id !== id) {
+      if (state.plan[previous.id]) {
+        state.plan[id] = state.plan[previous.id];
+        delete state.plan[previous.id];
+      }
+      state.constraints.forEach((item) => { if (item.driverId === previous.id) item.driverId = id; });
+    }
+    state.absences.forEach((item) => {
+      if (item.driverId === previous.id || (previous.matricola && normalizeMatricola(item.matricola) === normalizeMatricola(previous.matricola))) {
+        item.driverId = id;
+        item.matricola = matricola;
+      }
+    });
+    const differences = ["station", "id", "name", "contract", "status", "startDate", "endDate", "matricola", "duration"]
+      .filter((field) => String(previous[field] || "") !== String(next[field] || ""))
+      .map((field) => `${field}: ${previous[field] || "—"} → ${next[field] || "—"}`);
+    addLog("Dipendente modificato", "", next.name, previous.station, differences.join("; ") || "Nessuna variazione", next.station);
+  } else {
+    state.drivers.push(next);
+    addLog("Dipendente aggiunto", "", next.name, "", `${next.station}; ${next.contract}; ${next.duration}; ${next.matricola}`, next.station);
+  }
+  selectedDriverId = id;
+  state.drivers = sortedDrivers(state.drivers);
+  closeDriverModal();
+  saveAndRender();
+  showToast(existing ? "Dipendente modificato" : "Dipendente aggiunto");
 }
 
 function renderDriverFilterOptions() {
@@ -1834,7 +2237,7 @@ function updateDriverEndDate(driverId, value) {
   const driver = driverById(driverId);
   if (!driver) return;
   driver.endDate = normalizeDate(value);
-  driver.active = isActiveEmployee("", driver.endDate);
+  driver.active = driver.status !== "Cessato";
   addLog("Data fine contratto aggiornata", "", driver.name, "", driver.endDate || "Vuota");
   saveAndRender();
 }
@@ -2243,14 +2646,21 @@ function assignedCount(plan, drivers, date) {
 }
 
 function bestCandidateForDate(plan, drivers, date, weekDatesList, pass, mode) {
-  const candidates = drivers.filter((driver) => canAssignForPass(plan, driver, date, weekDatesList, pass));
+  const candidates = drivers.filter((driver) => canAssignForPass(plan, driver, date, weekDatesList, pass, mode));
   if (!candidates.length) return null;
   return candidates.sort((a, b) => candidateScore(plan, a, date, weekDatesList, pass, mode) - candidateScore(plan, b, date, weekDatesList, pass, mode))[0];
 }
 
-function canAssignForPass(plan, driver, date, weekDatesList, pass) {
+function canAssignForPass(plan, driver, date, weekDatesList, pass, mode = "saturation") {
   if (!canAssign(plan, driver, date, weekDatesList)) return false;
   const inContractDay = driver.contractDays.includes(dayIndex(date));
+  if (mode === "contract" && pass === "outside" && driver.duration === "TD") {
+    const missingContractDay = weekDatesList.some((day) => driver.contractDays.includes(dayIndex(day)) &&
+      isDriverAvailableOnDate(driver, day) && routeNeed(day) > 0 &&
+      !SATURATION_SYMBOLS.has(getCellFromPlan(plan, driver.id, day)) &&
+      getCellFromPlan(plan, driver.id, day) !== "RL");
+    if (missingContractDay) return false;
+  }
   const metrics = weeklyMetricsFromPlan(plan, driver, weekDatesList);
   if (pass === "contractUndersaturated") return inContractDay && metrics.saturationDays < metrics.contractDays;
   if (pass === "contract") return inContractDay;
@@ -2269,7 +2679,8 @@ function candidateScore(plan, driver, date, weekDatesList, pass, mode) {
   const outsidePenalty = pass === "outside" ? 100 + metrics.outsideContract * 20 : 0;
   const sixthSeventhPenalty = metrics.workDays >= 5 ? 80 : 0;
   const bPenalty = getCellFromPlan(plan, driver.id, date) === "B" ? -8 : 0;
-  return balancePriority + overTargetPenalty + outsidePenalty + sixthSeventhPenalty + consecutive * 5 + Math.max(0, contractPosition) + bPenalty;
+  const tdContractPriority = mode === "contract" && driver.duration === "TD" && driver.contractDays.includes(day) ? -1000 : 0;
+  return balancePriority + overTargetPenalty + outsidePenalty + sixthSeventhPenalty + consecutive * 5 + Math.max(0, contractPosition) + bPenalty + tdContractPriority;
 }
 
 function weeklyMetricsFromPlan(plan, driver, dates) {
@@ -2295,7 +2706,7 @@ function rebalanceWeek(plan, drivers, weekDatesList) {
 
     for (const overDriver of overDrivers) {
       const movableDates = weekDatesList
-        .filter((date) => !state.confirmedDates.includes(date) && getCellFromPlan(plan, overDriver.id, date) === "X")
+        .filter((date) => !state.confirmedDates.includes(date) && getCellFromPlan(plan, overDriver.id, date) === "X" && !(overDriver.duration === "TD" && overDriver.contractDays.includes(dayIndex(date))))
         .sort((a, b) => Number(overDriver.contractDays.includes(dayIndex(a))) - Number(overDriver.contractDays.includes(dayIndex(b))));
 
       for (const date of movableDates) {
@@ -2371,6 +2782,7 @@ function canAssign(plan, driver, date, weekOverride) {
 }
 
 function isDriverAvailableOnDate(driver, date) {
+  if (driver.active === false) return false;
   if (driver.startDate && date < driver.startDate) return false;
   if (driver.endDate && date > driver.endDate) return false;
   return true;
@@ -2635,6 +3047,7 @@ function importDrivers(rows) {
     const status = clean(getField(row, ["stato", "active"])).toLowerCase();
     const startDate = normalizeDate(getField(row, ["data_inizio_contratto", "data_inizio", "start_date"]));
     const endDate = normalizeDate(getField(row, ["data_fine_contratto", "data_fine", "end_date"]));
+    const duration = clean(getField(row, ["durata_contr", "durata_contratto", "duration"])).toUpperCase();
     const weeklyHours = parseNumber(getField(row, ["weekly_hours", "hours", "ore"])) || inferWeeklyHours(contract);
     const driver = {
       id,
@@ -2643,9 +3056,11 @@ function importDrivers(rows) {
       contract,
       weeklyHours,
       matricola,
-      active: isActiveEmployee(status, endDate),
+      status: status && !isActiveEmployee(status, "") ? "Cessato" : "Attivo",
+      active: isActiveEmployee(status, ""),
       startDate,
       endDate,
+      duration: duration === "TD" ? "TD" : "TI",
       contractDays: parseContractDays(row.days || contract)
     };
     const existing = state.drivers.find((item) => (matricola && normalizeMatricola(item.matricola) === matricola) || normalizeName(item.name) === normalizeName(name) || item.id === id);
@@ -2957,6 +3372,7 @@ function exportTableCsv(tableId, baseName) {
   }
   const rows = Array.from(table.querySelectorAll("tr"))
     .map((row) => Array.from(row.querySelectorAll("th,td"))
+      .filter((cell, index) => tableId !== "driversTable" || index > 0)
       .filter((cell) => !cell.classList.contains("row-actions"))
       .map((cell) => clean(cell.innerText).replace(/\s+/g, " ")))
     .filter((row) => row.length);
@@ -2974,7 +3390,7 @@ function exportModelData() {
     return;
   }
   const payload = {
-    version: "driver-shift-platform-backup-v1",
+    version: "driver-shift-platform-backup-v2",
     exportedAt: new Date().toISOString(),
     data: {
       station: state.station,
@@ -3007,6 +3423,11 @@ function importModelDataFile(event) {
   reader.onload = () => {
     try {
       const payload = JSON.parse(String(reader.result || "{}"));
+      if (!["driver-shift-platform-backup-v1", "driver-shift-platform-backup-v2"].includes(payload.version) ||
+          !payload.data || !Array.isArray(payload.data.drivers) || !Array.isArray(payload.data.forecast) ||
+          !Array.isArray(payload.data.absences) || !Array.isArray(payload.data.constraints) || !Array.isArray(payload.data.log)) {
+        throw new Error("Backup non riconosciuto");
+      }
       const imported = payload.data || payload;
       const users = state.users;
       state = {
@@ -3014,6 +3435,11 @@ function importModelDataFile(event) {
         ...pickImportableState(imported),
         users
       };
+      state.drivers.forEach((driver) => {
+        driver.duration = driver.duration === "TD" ? "TD" : "TI";
+        driver.status = driver.status || (driver.active === false && !driver.endDate ? "Cessato" : "Attivo");
+        driver.active = driver.status === "Attivo";
+      });
       addLog("Import backup dati", "", "", "", file.name);
       saveAndRender();
       showToast("Dati importati correttamente");
@@ -3056,7 +3482,7 @@ function driverById(id) {
 }
 
 function driver(id, name, station, contract, weeklyHours, matricola, contractDays) {
-  return { id, name, station, contract, weeklyHours, matricola, active: true, startDate: "", endDate: "", contractDays: contractDays || parseContractDays(contract) };
+  return { id, name, station, contract, weeklyHours, matricola, active: true, status: "Attivo", duration: "TI", startDate: "", endDate: "", contractDays: contractDays || parseContractDays(contract) };
 }
 
 function contractDaysLabel(driver) {
@@ -3065,6 +3491,11 @@ function contractDaysLabel(driver) {
 
 function normalizeDriverContracts() {
   state.drivers.forEach((driver) => {
+    if (!driver.status) {
+      driver.status = driver.active === false && !driver.endDate ? "Cessato" : "Attivo";
+      driver.active = driver.status === "Attivo";
+    }
+    if (driver.duration !== "TD") driver.duration = "TI";
     const parsed = parseContractDays(driver.contract || "");
     const hasContractDayPattern = /lun|mar|mer|gio|ven|sab|dom|sabato|venerdi/i.test(driver.contract || "");
     if (parsed.length && (!Array.isArray(driver.contractDays) || !driver.contractDays.length || hasContractDayPattern)) driver.contractDays = parsed;
@@ -3246,7 +3677,7 @@ function parseCsv(text) {
   const lines = text.replace(/\r/g, "").split("\n").filter((line) => line.trim());
   if (!lines.length) return rows;
   const separator = lines[0].includes(";") ? ";" : ",";
-  const headers = splitCsvLine(lines[0], separator).map((header) => clean(header).toLowerCase());
+  const headers = splitCsvLine(lines[0], separator).map(normalizeHeader);
   lines.slice(1).forEach((line) => {
     const values = splitCsvLine(line, separator);
     const row = {};
@@ -3371,11 +3802,11 @@ function emptyRow(columns) {
   return `<tr><td colspan="${columns}">Nessun dato disponibile</td></tr>`;
 }
 
-function addLog(action, date, driver, from, to) {
+function addLog(action, date, driver, from, to, station = state.station) {
   state.log.push({
     timestamp: new Date().toLocaleString("it-IT"),
     user: currentUser ? `${currentUser.fullName} (${currentUser.username})` : "",
-    station: state.station,
+    station,
     date,
     driver,
     action,
