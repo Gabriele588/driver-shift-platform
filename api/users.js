@@ -2,7 +2,7 @@ const crypto = require("crypto");
 const { currentUser, hashPassword, listUsers, send, supabase } = require("./_lib/core");
 
 function canManageUsers(user) {
-  return user && ["admin", "kam"].includes(user.role);
+  return user && user.role === "admin";
 }
 
 module.exports = async function handler(req, res) {

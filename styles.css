@@ -228,6 +228,34 @@ select {
   margin: 0 0 12px;
 }
 
+.home-backup-card {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.home-backup-card p {
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+
+.import-data-button {
+  align-items: center;
+  background: #e8eef8;
+  border-radius: 8px;
+  color: var(--primary-dark);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 800;
+  min-height: 40px;
+  padding: 10px 14px;
+}
+
+.import-data-button input {
+  display: none;
+}
+
 .tool-flow {
   display: block;
   height: auto;
@@ -434,6 +462,24 @@ td:first-child {
   padding: 6px 6px;
   text-align: right;
   width: 70px;
+}
+
+.weekly-saturation-six {
+  background: #d9c2ff;
+  color: #4b0082;
+  font-size: 12px;
+  font-weight: 900;
+  max-width: 76px;
+  min-width: 64px;
+  padding: 6px 6px;
+  text-align: right;
+  width: 70px;
+}
+
+.table-date-input {
+  min-height: 34px;
+  min-width: 132px;
+  padding: 6px 8px;
 }
 
 .weekly-delta-low,

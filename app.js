@@ -57,6 +57,7 @@ const els = {
   absencesViewDetail: document.querySelector("#absencesViewDetail"),
   driverFilterStation: document.querySelector("#driverFilterStation"),
   driverFilterHours: document.querySelector("#driverFilterHours"),
+  driverFilterName: document.querySelector("#driverFilterName"),
   constraintsTable: document.querySelector("#constraintsTable"),
   actualRoutesTable: document.querySelector("#actualRoutesTable"),
   driversTable: document.querySelector("#driversTable"),
@@ -100,6 +101,8 @@ const els = {
   exportPlanBtn: document.querySelector("#exportPlanBtn"),
   resetBtn: document.querySelector("#resetBtn"),
   clearLogBtn: document.querySelector("#clearLogBtn"),
+  homeExportDataBtn: document.querySelector("#homeExportDataBtn"),
+  homeImportDataInput: document.querySelector("#homeImportDataInput"),
   quickPlanBtn: document.querySelector("#quickPlanBtn"),
   quickImportsBtn: document.querySelector("#quickImportsBtn"),
   appStatus: document.querySelector("#appStatus"),
@@ -432,9 +435,12 @@ function renderAuth() {
     els.currentUserChip.textContent = authenticated ? `${currentUser.fullName} - ${roleLabel(currentUser.role)}` : "";
   }
   document.querySelectorAll("[data-admin-tab]").forEach((tab) => {
-    tab.hidden = !canManageUsers();
+    tab.hidden = !isAdmin();
   });
-  if (authenticated && !canManageUsers() && document.querySelector("#usersPanel")?.classList.contains("active")) {
+  document.querySelectorAll("[data-admin-only]").forEach((item) => {
+    item.hidden = !isAdmin();
+  });
+  if (authenticated && !isAdmin() && document.querySelector("#usersPanel")?.classList.contains("active")) {
     switchTab("calendar");
   }
   if (els.clearLogBtn) els.clearLogBtn.hidden = !isAdmin();
@@ -446,7 +452,7 @@ function isAdmin() {
 }
 
 function canManageUsers() {
-  return currentUser?.role === "admin" || currentUser?.role === "kam";
+  return isAdmin();
 }
 
 function hasGlobalAccess() {
@@ -507,6 +513,7 @@ function bindEvents() {
   els.absencesViewDetail?.addEventListener("input", () => renderAbsencesView());
   els.driverFilterStation?.addEventListener("change", () => renderDrivers());
   els.driverFilterHours?.addEventListener("change", () => renderDrivers());
+  els.driverFilterName?.addEventListener("input", () => renderDrivers());
   document.querySelectorAll("[data-export-table]").forEach((button) => {
     button.addEventListener("click", () => exportTableCsv(button.dataset.exportTable, button.dataset.exportName || button.dataset.exportTable));
   });
@@ -518,6 +525,8 @@ function bindEvents() {
     runPlanning("contract");
   });
   els.quickImportsBtn?.addEventListener("click", () => switchTab("imports"));
+  els.homeExportDataBtn?.addEventListener("click", exportModelData);
+  els.homeImportDataInput?.addEventListener("change", importModelDataFile);
   els.exportPlanBtn.addEventListener("click", exportPlanCsv);
   els.resetBtn.addEventListener("click", resetData);
   els.clearLogBtn.addEventListener("click", () => {
@@ -549,8 +558,8 @@ function bindEvents() {
 }
 
 function switchTab(tab) {
-  if (tab === "users" && !canManageUsers()) {
-    showToast("Sezione disponibile solo per Amministratore e Key Account Manager");
+  if (tab === "users" && !isAdmin()) {
+    showToast("Sezione disponibile solo per l'Amministratore");
     return;
   }
   document.querySelectorAll(".tabs button").forEach((button) => button.classList.toggle("active", button.dataset.tab === tab));
@@ -603,7 +612,7 @@ function renderLegend() {
 function renderConstraintDriverOptions() {
   const drivers = filteredDrivers();
   els.constraintDriver.innerHTML = drivers
-    .map((driver) => `<option value="${escapeHtml(driver.id)}">${escapeHtml(driver.name)} (${escapeHtml(driver.id)})</option>`)
+    .map((driver) => `<option value="${escapeHtml(driver.id)}">${escapeHtml(driver.name)} - ${escapeHtml(contractDaysLabel(driver))}</option>`)
     .join("");
 }
 
@@ -733,7 +742,7 @@ function calendarColumns(dates) {
 function renderWeeklyMetricCell(driver, column) {
   const metrics = weeklyDriverMetrics(driver, column.dates);
   const value = metrics[column.metric];
-  const className = column.metric === "saturation" ? saturationClass(metrics.saturation) : column.metric === "deltaDays" ? deltaClass(metrics.deltaDays) : "weekly-index-cell";
+  const className = column.metric === "saturation" ? saturationClass(metrics.saturation, metrics.weeklyX) : column.metric === "deltaDays" ? deltaClass(metrics.deltaDays) : "weekly-index-cell";
   return `<td class="${className}">${column.metric === "saturation" ? `${value}%` : value}</td>`;
 }
 
@@ -747,7 +756,8 @@ function weeklyDriverMetrics(driver, dates) {
   return { weeklyX, contractDays, deltaDays, saturation, outsideContract };
 }
 
-function saturationClass(value) {
+function saturationClass(value, weeklyWorkDays = 0) {
+  if (weeklyWorkDays >= 6) return "weekly-saturation-six";
   if (value === 100) return "weekly-saturation-ok";
   if (value > 100) return "weekly-saturation-high";
   return "weekly-saturation-low";
@@ -847,11 +857,13 @@ function renderActualRoutes() {
 function renderDrivers() {
   const station = els.driverFilterStation?.value || state.station || "Tutte";
   const hours = els.driverFilterHours?.value || "Tutte";
+  const nameFilter = normalizeName(els.driverFilterName?.value || "");
   const drivers = sortedDrivers(state.drivers.filter((driver) => {
     if (driver.active === false) return false;
     if (!canAccessStation(driver.station)) return false;
     if (station !== "Tutte" && driver.station !== station) return false;
     if (hours !== "Tutte" && String(driver.weeklyHours) !== hours) return false;
+    if (nameFilter && !normalizeName(driver.name).includes(nameFilter)) return false;
     return true;
   }));
   const rows = drivers.map((driver) => `<tr>
@@ -861,11 +873,14 @@ function renderDrivers() {
     <td>${escapeHtml(driver.matricola || "")}</td>
     <td>${escapeHtml(driver.contract)}</td>
     <td>${driver.startDate ? formatShortDate(driver.startDate) : ""}</td>
-    <td>${driver.endDate ? formatShortDate(driver.endDate) : ""}</td>
+    <td><input class="table-date-input" data-driver-end-date="${escapeHtml(driver.id)}" type="date" value="${escapeHtml(driver.endDate || "")}" /></td>
     <td>${driver.weeklyHours}</td>
-    <td>${driver.contractDays.map((day) => DAY_NAMES[day]).join(", ")}</td>
+    <td>${escapeHtml(contractDaysLabel(driver))}</td>
   </tr>`).join("");
   els.driversTable.innerHTML = `<thead><tr><th>ID</th><th>Nome</th><th>Station</th><th>Matricola</th><th>Contratto</th><th>Data inizio</th><th>Data fine</th><th>Ore</th><th>Giorni</th></tr></thead><tbody>${rows || emptyRow(9)}</tbody>`;
+  els.driversTable.querySelectorAll("[data-driver-end-date]").forEach((input) => {
+    input.addEventListener("change", () => updateDriverEndDate(input.dataset.driverEndDate, input.value));
+  });
 }
 
 function renderDriverFilterOptions() {
@@ -880,6 +895,15 @@ function renderDriverFilterOptions() {
   els.driverFilterHours.innerHTML = hours.map((hour) => `<option value="${escapeHtml(hour)}">${escapeHtml(hour)}</option>`).join("");
   els.driverFilterStation.value = stations.includes(currentStation) ? currentStation : "Tutte";
   els.driverFilterHours.value = hours.includes(currentHours) ? currentHours : "Tutte";
+}
+
+function updateDriverEndDate(driverId, value) {
+  const driver = driverById(driverId);
+  if (!driver) return;
+  driver.endDate = normalizeDate(value);
+  driver.active = isActiveEmployee("", driver.endDate);
+  addLog("Data fine contratto aggiornata", "", driver.name, "", driver.endDate || "Vuota");
+  saveAndRender();
 }
 
 function renderUsers() {
@@ -1380,6 +1404,7 @@ function applyConstraints(plan, drivers, dates) {
     if (!driver || !dates.includes(constraint.date)) return;
     const current = getCellFromPlan(plan, driver.id, constraint.date);
     if (current === "F" || current === "M") return;
+    if (constraint.type === "X" && (!isDriverAvailableOnDate(driver, constraint.date) || wouldCreateSixConsecutiveWorkDays(plan, driver.id, constraint.date))) return;
     setCellInPlan(plan, driver.id, constraint.date, constraint.type === "X" ? "XL" : "RL");
   });
 }
@@ -1408,7 +1433,7 @@ function canAssign(plan, driver, date, weekOverride) {
     return value === "F" || value === "M";
   });
   if (absentAllContractDays && !hasForcedX(driver.id, date)) return false;
-  if (previousConsecutiveDays(plan, driver.id, date) >= 5 && !driver.contractDays.includes(dayIndex(date))) return false;
+  if (wouldCreateSixConsecutiveWorkDays(plan, driver.id, date)) return false;
   return true;
 }
 
@@ -1617,6 +1642,16 @@ function applyTargetedDayChange(event) {
   if (current === next) {
     closeModifyDayModal();
     return;
+  }
+  if (WORK_SYMBOLS.has(next)) {
+    if (!isDriverAvailableOnDate(driver, date)) {
+      showToast("Dipendente non pianificabile oltre la data di contratto");
+      return;
+    }
+    if (!WORK_SYMBOLS.has(current) && wouldCreateSixConsecutiveWorkDays(state.plan, driver.id, date)) {
+      showToast("Non puoi pianificare 6 giorni consecutivi");
+      return;
+    }
   }
   setCell(driver.id, date, next);
   addLog("Modifica mirata giornata", date, driver.name, current, next);
@@ -2000,6 +2035,81 @@ function exportTableCsv(tableId, baseName) {
   download(`${baseName}-${date}.csv`, rows.map((row) => row.map(csvEscape).join(";")).join("\n"));
 }
 
+function exportModelData() {
+  if (!isAdmin()) {
+    showToast("Funzione disponibile solo per l'Amministratore");
+    return;
+  }
+  const payload = {
+    version: "driver-shift-platform-backup-v1",
+    exportedAt: new Date().toISOString(),
+    data: {
+      station: state.station,
+      weekStart: state.weekStart,
+      weeks: state.weeks,
+      forecastIncrease: state.forecastIncrease,
+      drivers: state.drivers,
+      forecast: state.forecast,
+      absences: state.absences,
+      constraints: state.constraints,
+      actualRoutes: state.actualRoutes || [],
+      plan: state.plan || {},
+      confirmedDates: state.confirmedDates || [],
+      log: state.log || []
+    }
+  };
+  download(`backup-dati-turni-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
+  showToast("Backup dati esportato");
+}
+
+function importModelDataFile(event) {
+  if (!isAdmin()) {
+    showToast("Funzione disponibile solo per l'Amministratore");
+    event.target.value = "";
+    return;
+  }
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const payload = JSON.parse(String(reader.result || "{}"));
+      const imported = payload.data || payload;
+      const users = state.users;
+      state = {
+        ...defaultState(),
+        ...pickImportableState(imported),
+        users
+      };
+      addLog("Import backup dati", "", "", "", file.name);
+      saveAndRender();
+      showToast("Dati importati correttamente");
+    } catch {
+      showToast("File backup non valido");
+    } finally {
+      event.target.value = "";
+    }
+  };
+  reader.readAsText(file);
+}
+
+function pickImportableState(data) {
+  return {
+    station: clean(data.station) || state.station,
+    weekStart: normalizeDate(data.weekStart) || state.weekStart,
+    weeks: Number(data.weeks || state.weeks || 6),
+    forecastIncrease: Number(data.forecastIncrease || 0),
+    drivers: Array.isArray(data.drivers) ? data.drivers : [],
+    forecast: Array.isArray(data.forecast) ? data.forecast : [],
+    absences: Array.isArray(data.absences) ? data.absences : [],
+    constraints: Array.isArray(data.constraints) ? data.constraints : [],
+    actualRoutes: Array.isArray(data.actualRoutes) ? data.actualRoutes : [],
+    plan: data.plan && typeof data.plan === "object" ? data.plan : {},
+    confirmedDates: Array.isArray(data.confirmedDates) ? data.confirmedDates : [],
+    log: Array.isArray(data.log) ? data.log : []
+  };
+}
+
 function filteredDrivers() {
   return sortedDrivers(state.drivers.filter((driver) => driver.active !== false && driver.station === state.station));
 }
@@ -2014,6 +2124,10 @@ function driverById(id) {
 
 function driver(id, name, station, contract, weeklyHours, matricola, contractDays) {
   return { id, name, station, contract, weeklyHours, matricola, active: true, startDate: "", endDate: "", contractDays: contractDays || parseContractDays(contract) };
+}
+
+function contractDaysLabel(driver) {
+  return (driver.contractDays || []).map((day) => DAY_NAMES[day]).join(", ");
 }
 
 function normalizeDriverContracts() {
@@ -2072,6 +2186,20 @@ function previousConsecutiveDays(plan, driverId, date) {
     count += 1;
   }
   return count;
+}
+
+function nextConsecutiveDays(plan, driverId, date) {
+  let count = 0;
+  for (let offset = 1; offset <= 7; offset += 1) {
+    const value = getCellFromPlan(plan, driverId, addDays(date, offset));
+    if (!WORK_SYMBOLS.has(value)) break;
+    count += 1;
+  }
+  return count;
+}
+
+function wouldCreateSixConsecutiveWorkDays(plan, driverId, date) {
+  return previousConsecutiveDays(plan, driverId, date) + 1 + nextConsecutiveDays(plan, driverId, date) >= 6;
 }
 
 function hasForcedX(driverId, date) {
@@ -2334,8 +2462,8 @@ function showToast(message) {
   window.setTimeout(() => els.toast.classList.remove("show"), Math.min(8000, Math.max(3200, String(message).length * 55)));
 }
 
-function download(filename, content) {
-  const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+function download(filename, content, type = "text/csv;charset=utf-8") {
+  const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
